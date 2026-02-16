@@ -41,7 +41,7 @@ alias rr='sudo $(fc -ln -1)'
 
 # Config & Session
 alias conf='vim ~/.bashrc'
-alias confc='[[ -x $(command -v code) ]] && code ~/arch-config/ || echo "VS Code not found."'
+alias confc='[[ -x $(command -v codium) ]] && codium ~/arch-config/ || echo "VSCodium not found."'
 alias reload='source ~/.bashrc'
 
 # Maintenance
