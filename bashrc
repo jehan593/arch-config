@@ -258,10 +258,35 @@ fh() {
 }
 
 ff() {
+    local copy_cmd
+    if command -v wl-copy &> /dev/null; then 
+        copy_cmd="wl-copy"
+    elif command -v xclip &> /dev/null; then 
+        copy_cmd="xclip -selection clipboard"
+    fi
+
     echo "FileSync: Updating database..."
     sudo updatedb && clear
-    file=$(plocate / | fzf --exact --tiebreak=length,end,index --prompt="🔍 Search: " --height=40% --layout=reverse)
-    [[ -n "$file" ]] && xdg-open "$file" >/dev/null 2>&1
+
+    local selection=$(plocate / | fzf --exact --tiebreak=length,end,index \
+        --prompt="🔍 Search: " --height=40% --layout=reverse \
+        --header="ENTER: Open | ALT-C: Copy Path" --expect="alt-c")
+
+    local key=$(echo "$selection" | head -n 1)
+    local file=$(echo "$selection" | sed -n '2p')
+
+    if [[ -n "$file" ]]; then
+        if [[ "$key" == "alt-c" ]]; then
+            if [[ -n "$copy_cmd" ]]; then
+                echo -n "$file" | eval "$copy_cmd"
+                echo -e "${NORD_CYAN}󰅍 Path Copied:${RST} $file"
+            else
+                echo -e "${NORD_RED}No clipboard tool found.${RST}"
+            fi
+        else
+            xdg-open "$file" >/dev/null 2>&1
+        fi
+    fi
 }
 
 # ------------------------------------------------------------------------------
