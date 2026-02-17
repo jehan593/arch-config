@@ -237,6 +237,19 @@ upf() {
     [[ "$found_any" = false ]] && echo "No profiles found." || echo -e "${NORD_GREEN}Firefox profiles hardened!${RST}"
 }
 
+upc() {
+    echo -e "${NORD_CYAN}󰚰 Checking for config updates...${RST}"
+    git -C "$HOME/arch-config" pull --rebase --autostash
+
+    if [ $? -eq 0 ]; then
+        echo -e "\033[0;32m🚀 Configs are up to date!${RST}"
+        source ~/.bashrc
+    else
+        echo -e "\033[0;31m❌ Update failed. Check for merge conflicts.${RST}"
+        return 1
+    fi
+}
+
 # ------------------------------------------------------------------------------
 # 7. PRODUCTIVITY TOOLS
 # ------------------------------------------------------------------------------
@@ -357,7 +370,7 @@ info() {
     fi
 
     printf "     ${NORD_D_BLUE}┃${RST} ${NORD_BLUE}%-10s${RST} ${NORD_D_BLUE}┃${RST} %-42s ${NORD_D_BLUE}┃${RST}\n" "Network"  "cdns-(on/off), warp-(on/off), termux"
-    printf "     ${NORD_D_BLUE}┃${RST} ${NORD_BLUE}%-10s${RST} ${NORD_D_BLUE}┃${RST} %-42s ${NORD_D_BLUE}┃${RST}\n" "Utils"    "rr (sudo), fh (hist), ff, upf, pirith"
+    printf "     ${NORD_D_BLUE}┃${RST} ${NORD_BLUE}%-10s${RST} ${NORD_D_BLUE}┃${RST} %-42s ${NORD_D_BLUE}┃${RST}\n" "Utils"    "rr (sudo), fh (hist), ff, upf, upc, pirith"
     printf "     ${NORD_D_BLUE}┃${RST} ${NORD_BLUE}%-10s${RST} ${NORD_D_BLUE}┃${RST} %-42s ${NORD_D_BLUE}┃${RST}\n" "Time"      "day, week, month, year"
   
     echo -e "     ${NORD_D_BLUE}┗━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${RST}\n"
