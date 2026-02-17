@@ -81,7 +81,7 @@ sys() {
         printf "     ${NORD_BLUE}󱊟 ${NORD_D_BLUE} %-11s ${RST}${NORD_BLUE}%s${RST}\n" "Battery" "$cons_status"
     fi
 
-    printf "     ${NORD_BLUE} ${NORD_D_BLUE} %-11s ${RST}${NORD_BLUE}Bash ${BASH_VERSION%%.*}${RST}\n" "Shell"
+    printf "     ${NORD_BLUE} ${NORD_D_BLUE} %-11s ${RST}${NORD_BLUE}Bash ${BASH_VERSION%%(*}${RST}\n" "Shell"
     echo -e "     ${NORD_D_BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RST}\n"
 }
 
@@ -224,7 +224,7 @@ upf() {
         echo 'user_pref("browser.search.suggest.enabled", true);'
         echo 'user_pref("browser.contentblocking.category", "");'
         echo 'user_pref("privacy.globalprivacycontrol.enabled", false);'
-        echo 'user_pref("gfx.webrender.software",false);'
+        echo 'user_pref("gfx.webrender.software",true);'
     } >> "$TEMP_FILE"
     local found_any=false
     while IFS= read -r times_file; do
