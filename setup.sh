@@ -48,7 +48,7 @@ mkdir -p "$HOME/.config"
 ln -sf "$DOTDIR/bashrc" "$HOME/.bashrc"
 ln -sf "$DOTDIR/vimrc" "$HOME/.vimrc"
 mkdir -p ~/.vim/colors
-curl -LSso ~/.vim/colors/nord.vim https://raw.githubusercontent.com/nordtheme/vim/main/colors/nord.vim
+curl -o ~/.vim/colors/nord.vim https://raw.githubusercontent.com/nordtheme/vim/main/colors/nord.vim
 
 # Symlink starship (if you moved it to the repo)
 if [ -f "$DOTDIR/starship.toml" ]; then
