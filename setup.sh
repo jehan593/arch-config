@@ -1,24 +1,67 @@
 #!/bin/bash
-# Define colors for output (Nord-inspired)
-CYAN='\033[0;36m'
-BLUE='\033[0;34m'
-RED='\033[0;31m'
+
+# ==============================================================================
+# ARCH DOTFILES SETUP
+# ==============================================================================
+
+# Nord RGB Colors
+CYAN='\033[38;2;143;188;187m'
+BLUE='\033[38;2;136;192;208m'
+GREEN='\033[38;2;163;190;140m'
+RED='\033[38;2;191;97;106m'
+D_BLUE='\033[38;2;129;161;193m'
 RST='\033[0m'
 
-echo -e "${CYAN}🚀 Starting Arch Dotfiles Setup...${RST}"
+# --- Helpers ---
+ok()   { echo -e "${GREEN}[OK]${RST}    $1"; }
+info() { echo -e "${BLUE}[INFO]${RST}  $1"; }
+err()  { echo -e "${RED}[ERR]${RST}   $1"; }
+step() { echo -e "\n${CYAN}==> $1${RST}"; }
 
-# 1. Check for AUR Helper (yay)
-if ! command -v yay &> /dev/null; then
-    echo -e "${BLUE}📦 Installing yay...${RST}"
-    sudo pacman -S --needed base-devel git
-    git clone https://aur.archlinux.org/yay.git /tmp/yay
-    (cd /tmp/yay && makepkg -si --noconfirm)
-else
-    echo -e "${CYAN}✅ yay is already installed.${RST}"
+# --- Pre-flight checks ---
+
+# Do not run as root
+if [[ "$EUID" -eq 0 ]]; then
+    err "Do not run this script as root."
+    exit 1
 fi
 
-# 2. Install Core Dependencies
-echo -e "${BLUE}📥 Installing dependencies...${RST}"
+# Check arch-config repo exists
+DOTDIR="$HOME/arch-config"
+if [[ ! -d "$DOTDIR" ]]; then
+    err "arch-config not found at $DOTDIR"
+    err "Please clone your repo first: git clone <your-repo-url> ~/arch-config"
+    exit 1
+fi
+
+echo -e "${CYAN}"
+echo "  ================================================"
+echo "       Arch Dotfiles Setup"
+echo "  ================================================"
+echo -e "${RST}"
+
+# ==============================================================================
+# 1. AUR HELPER (yay)
+# ==============================================================================
+step "Checking AUR helper (yay)..."
+
+if ! command -v yay &>/dev/null; then
+    info "Installing yay..."
+    sudo pacman -S --needed base-devel git
+    rm -rf /tmp/yay-install
+    git clone https://aur.archlinux.org/yay.git /tmp/yay-install
+    (cd /tmp/yay-install && makepkg -si --noconfirm)
+    rm -rf /tmp/yay-install
+    ok "yay installed."
+else
+    ok "yay already installed."
+fi
+
+# ==============================================================================
+# 2. CORE DEPENDENCIES
+# ==============================================================================
+step "Installing dependencies..."
+
 DEPENDENCIES=(
     "wireproxy"
     "bat"
@@ -27,71 +70,100 @@ DEPENDENCIES=(
     "gvim"
     "starship"
     "fzf"
+    "zoxide"
     "mpv"
     "wl-clipboard"      # provides wl-copy and wl-paste
     "xclip"
     "reflector"
     "pacman-contrib"    # provides checkupdates
 )
+
 yay -S --needed --noconfirm "${DEPENDENCIES[@]}"
 
-# 3. Create Symlinks
-echo -e "${BLUE}🔗 Creating symlinks...${RST}"
-DOTDIR="$HOME/arch-config"
+info "Initializing plocate database..."
+sudo updatedb
+ok "Dependencies installed."
 
-# Ensure .config exists
+# ==============================================================================
+# 3. SYMLINKS
+# ==============================================================================
+step "Creating symlinks..."
+
 mkdir -p "$HOME/.config"
 
-# Symlink bashrc and vimrc
+# bashrc and vimrc
 ln -sf "$DOTDIR/bashrc" "$HOME/.bashrc"
+ok "Linked bashrc -> ~/.bashrc"
+
 ln -sf "$DOTDIR/vimrc" "$HOME/.vimrc"
+ok "Linked vimrc -> ~/.vimrc"
 
-# Download Nord theme for vim only if not already present
-mkdir -p ~/.vim/colors
-if [ ! -f ~/.vim/colors/nord.vim ]; then
-    echo -e "${BLUE}🎨 Downloading Nord vim theme...${RST}"
-    curl -o ~/.vim/colors/nord.vim https://raw.githubusercontent.com/nordtheme/vim/main/colors/nord.vim
-else
-    echo -e "${CYAN}✅ Nord vim theme already exists.${RST}"
-fi
-
-# Symlink starship config if present in repo
-if [ -f "$DOTDIR/starship.toml" ]; then
+# starship config
+if [[ -f "$DOTDIR/starship.toml" ]]; then
     ln -sf "$DOTDIR/starship.toml" "$HOME/.config/starship.toml"
+    ok "Linked starship.toml -> ~/.config/starship.toml"
+else
+    info "starship.toml not found in repo, skipping."
 fi
 
-# Configure Bat for Nord Theme
-echo -e "${BLUE}🦇 Configuring bat theme...${RST}"
+# Nord vim theme
+mkdir -p "$HOME/.vim/colors"
+if [[ ! -f "$HOME/.vim/colors/nord.vim" ]]; then
+    info "Downloading Nord vim theme..."
+    curl -fsSL -o "$HOME/.vim/colors/nord.vim" \
+        https://raw.githubusercontent.com/nordtheme/vim/main/colors/nord.vim \
+        && ok "Nord vim theme downloaded." \
+        || err "Failed to download Nord vim theme."
+else
+    ok "Nord vim theme already exists."
+fi
+
+# bat Nord theme
+info "Configuring bat theme..."
 mkdir -p "$HOME/.config/bat"
 echo '--theme="Nord"' > "$HOME/.config/bat/config"
+ok "bat configured with Nord theme."
 
-# 4. Configure passwordless updatedb
-echo -e "${BLUE}🔐 Configuring passwordless updatedb...${RST}"
+# ==============================================================================
+# 4. PASSWORDLESS UPDATEDB
+# ==============================================================================
+step "Configuring passwordless updatedb..."
+
 SUDOERS_FILE="/etc/sudoers.d/updatedb-nopasswd"
-if [ ! -f "$SUDOERS_FILE" ]; then
+
+if [[ ! -f "$SUDOERS_FILE" ]]; then
     SUDOERS_TMP="${SUDOERS_FILE}.tmp"
     echo "$USER ALL=(ALL) NOPASSWD: /usr/bin/updatedb" | sudo tee "$SUDOERS_TMP" > /dev/null
-    # Validate before applying
-    if sudo visudo -c -f "$SUDOERS_TMP"; then
+    if sudo visudo -c -f "$SUDOERS_TMP" &>/dev/null; then
         sudo mv "$SUDOERS_TMP" "$SUDOERS_FILE"
         sudo chmod 440 "$SUDOERS_FILE"
-        echo -e "${CYAN}✅ Sudoers rule added.${RST}"
+        ok "Sudoers rule added for updatedb."
     else
         sudo rm -f "$SUDOERS_TMP"
-        echo -e "${RED}❌ Sudoers rule validation failed. Skipping.${RST}"
+        err "Sudoers validation failed. Skipping passwordless updatedb."
     fi
 else
-    echo -e "${CYAN}✅ Sudoers rule already exists.${RST}"
+    ok "Sudoers rule already exists."
 fi
 
-# 5. Wireproxy & wg-socks Setup
-echo -e "${BLUE}🛡️ Setting up wg-socks manager...${RST}"
-if [ -f "$DOTDIR/scripts/wg-socks.sh" ]; then
+# ==============================================================================
+# 5. WG-SOCKS SETUP
+# ==============================================================================
+step "Setting up wg-socks manager..."
+
+if [[ -f "$DOTDIR/scripts/wg-socks.sh" ]]; then
     chmod +x "$DOTDIR/scripts/wg-socks.sh"
     sudo ln -sf "$DOTDIR/scripts/wg-socks.sh" "/usr/local/bin/wg-socks"
-    echo -e "${CYAN}✅ wg-socks command linked to /usr/local/bin/wg-socks${RST}"
+    ok "wg-socks linked to /usr/local/bin/wg-socks"
 else
-    echo -e "${RED}⚠️  wg-socks.sh not found in $DOTDIR/scripts/, skipping.${RST}"
+    err "wg-socks.sh not found in $DOTDIR/scripts/, skipping."
 fi
 
-echo -e "${CYAN}✅ Setup complete! Run 'source ~/.bashrc' to reload your shell.${RST}"
+# ==============================================================================
+# DONE
+# ==============================================================================
+echo -e "\n${CYAN}  ================================================${RST}"
+echo -e "${GREEN}  Setup complete!${RST}"
+echo -e "${D_BLUE}  - Open a new terminal or run: source ~/.bashrc${RST}"
+echo -e "${D_BLUE}  - Note: Install a Nerd Font for full icon support${RST}"
+echo -e "${CYAN}  ================================================${RST}\n"
