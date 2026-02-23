@@ -124,6 +124,13 @@ mkdir -p "$HOME/.config/bat"
 echo '--theme="Nord"' > "$HOME/.config/bat/config"
 ok "bat configured with Nord theme."
 
+# mpv configs
+mkdir -p "$HOME/.config/mpv"
+ln -sf "$DOTDIR/mpv/input.conf" "$HOME/.config/mpv/input.conf"
+ok "Linked mpv/input.conf -> ~/.config/mpv/input.conf"
+ln -sf "$DOTDIR/mpv/mpv.conf" "$HOME/.config/mpv/mpv.conf"
+ok "Linked mpv/mpv.conf -> ~/.config/mpv/mpv.conf"
+
 # ==============================================================================
 # 4. PASSWORDLESS UPDATEDB
 # ==============================================================================

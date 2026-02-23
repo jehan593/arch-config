@@ -43,6 +43,8 @@ step "Removing symlinks..."
 for target in \
     "$HOME/.bashrc" \
     "$HOME/.vimrc" \
+    "$HOME/.config/mpv/input.conf" \
+    "$HOME/.config/mpv/mpv.conf" \
     "$HOME/.config/starship.toml"; do
     if [[ -L "$target" ]]; then
         rm "$target"
