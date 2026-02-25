@@ -1,49 +1,64 @@
 #!/bin/bash
 
 # ==============================================================================
-# ARCH DOTFILES SETUP
+# ARCH DOTFILES SETUP (Nord Aesthetic)
 # ==============================================================================
 
-# Nord RGB Colors
-CYAN='\033[38;2;143;188;187m'
-BLUE='\033[38;2;136;192;208m'
-GREEN='\033[38;2;163;190;140m'
-RED='\033[38;2;191;97;106m'
-D_BLUE='\033[38;2;129;161;193m'
-RST='\033[0m'
+# Nord Colors
+NORD_POLAR_4='\e[38;2;76;86;106m'
+NORD_SNOW_1='\e[38;2;216;222;233m'
+NORD_CYAN='\e[38;2;143;188;187m'
+NORD_BLUE='\e[38;2;136;192;208m'
+NORD_D_BLUE='\e[38;2;129;161;193m'
+NORD_GREEN='\e[38;2;163;190;140m'
+NORD_RED='\e[38;2;191;97;106m'
+NORD_ORANGE='\e[38;2;208;135;112m'
+RST='\e[0m'
 
-# --- Helpers ---
-ok()   { echo -e "${GREEN}[OK]${RST}    $1"; }
-info() { echo -e "${BLUE}[INFO]${RST}  $1"; }
-err()  { echo -e "${RED}[ERR]${RST}   $1"; }
-step() { echo -e "\n${CYAN}==> $1${RST}"; }
+HEADER_LINE="${NORD_POLAR_4}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RST}"
+
+# --- UI Helpers ---
+_print_header() {
+    echo -e "\n  ${NORD_CYAN}>>${RST}  ${NORD_SNOW_1}${1}${RST}"
+    echo -e "  ${HEADER_LINE}"
+}
+
+_print_footer() {
+    echo -e "  ${HEADER_LINE}\n"
+}
+
+ok()   { printf "  ${NORD_POLAR_4}│${RST}  ${NORD_GREEN}[OK]${RST}    %s\n" "$1"; }
+info() { printf "  ${NORD_POLAR_4}│${RST}  ${NORD_BLUE}[INFO]${RST}  %s\n" "$1"; }
+err()  { printf "  ${NORD_POLAR_4}│${RST}  ${NORD_RED}[ERR]${RST}   %s\n" "$1"; }
+step() { _print_footer; _print_header "$1"; }
 
 # --- Pre-flight checks ---
 
-# Do not run as root
 if [[ "$EUID" -eq 0 ]]; then
-    err "Do not run this script as root."
+    echo -e "\n  ${NORD_RED}[ERR]  Do not run this script as root.${RST}\n"
     exit 1
 fi
 
-# Check arch-config repo exists
 DOTDIR="$HOME/arch-config"
+
+echo -e "\n  ${NORD_CYAN}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${RST}"
+echo -e "  ${NORD_CYAN}┃${RST}          ${NORD_SNOW_1}Arch Dotfiles Setup${RST}          ${NORD_CYAN}┃${RST}"
+echo -e "  ${NORD_CYAN}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${RST}"
+
+_print_header "Pre-flight Checks"
+
 if [[ ! -d "$DOTDIR" ]]; then
     err "arch-config not found at $DOTDIR"
-    err "Please clone your repo first: git clone <your-repo-url> ~/arch-config"
+    err "Clone your repo first: git clone <url> ~/arch-config"
+    _print_footer
     exit 1
 fi
-
-echo -e "${CYAN}"
-echo "  ================================================"
-echo "       Arch Dotfiles Setup"
-echo "  ================================================"
-echo -e "${RST}"
+ok "arch-config found at $DOTDIR"
 
 # ==============================================================================
 # 1. AUR HELPER (yay)
 # ==============================================================================
-step "Checking AUR helper (yay)..."
+step "Checking AUR helper (yay)"
 
 if ! command -v yay &>/dev/null; then
     info "Installing yay..."
@@ -60,7 +75,7 @@ fi
 # ==============================================================================
 # 2. CORE DEPENDENCIES
 # ==============================================================================
-step "Installing dependencies..."
+step "Installing dependencies"
 
 DEPENDENCIES=(
     "wireproxy"
@@ -72,12 +87,13 @@ DEPENDENCIES=(
     "fzf"
     "zoxide"
     "mpv"
-    "wl-clipboard"      # provides wl-copy and wl-paste
+    "wl-clipboard"
     "xclip"
     "reflector"
-    "pacman-contrib"    # provides checkupdates
+    "pacman-contrib"
 )
 
+info "Updating package database..."
 yay -S --needed --noconfirm "${DEPENDENCIES[@]}"
 
 info "Initializing plocate database..."
@@ -87,24 +103,23 @@ ok "Dependencies installed."
 # ==============================================================================
 # 3. SYMLINKS
 # ==============================================================================
-step "Creating symlinks..."
+step "Creating symlinks"
 
 mkdir -p "$HOME/.config"
 
-# bashrc and vimrc
-ln -sf "$DOTDIR/bashrc" "$HOME/.bashrc"
-ok "Linked bashrc -> ~/.bashrc"
+# Root dotfiles
+ln -sf "$DOTDIR/.bashrc" "$HOME/.bashrc"
+ok "Linked .bashrc -> ~/.bashrc"
 
-ln -sf "$DOTDIR/vimrc" "$HOME/.vimrc"
-ok "Linked vimrc -> ~/.vimrc"
+ln -sf "$DOTDIR/.vimrc" "$HOME/.vimrc"
+ok "Linked .vimrc -> ~/.vimrc"
 
-# starship config
-if [[ -f "$DOTDIR/starship.toml" ]]; then
-    ln -sf "$DOTDIR/starship.toml" "$HOME/.config/starship.toml"
-    ok "Linked starship.toml -> ~/.config/starship.toml"
-else
-    info "starship.toml not found in repo, skipping."
-fi
+# .config symlinks
+for item in "$DOTDIR/.config/"*; do
+    target="$HOME/.config/$(basename "$item")"
+    ln -sf "$item" "$target"
+    ok "Linked $(basename "$item") -> ~/.config/$(basename "$item")"
+done
 
 # Nord vim theme
 mkdir -p "$HOME/.vim/colors"
@@ -124,17 +139,10 @@ mkdir -p "$HOME/.config/bat"
 echo '--theme="Nord"' > "$HOME/.config/bat/config"
 ok "bat configured with Nord theme."
 
-# mpv configs
-mkdir -p "$HOME/.config/mpv"
-ln -sf "$DOTDIR/mpv/input.conf" "$HOME/.config/mpv/input.conf"
-ok "Linked mpv/input.conf -> ~/.config/mpv/input.conf"
-ln -sf "$DOTDIR/mpv/mpv.conf" "$HOME/.config/mpv/mpv.conf"
-ok "Linked mpv/mpv.conf -> ~/.config/mpv/mpv.conf"
-
 # ==============================================================================
 # 4. PASSWORDLESS UPDATEDB
 # ==============================================================================
-step "Configuring passwordless updatedb..."
+step "Configuring passwordless updatedb"
 
 SUDOERS_FILE="/etc/sudoers.d/updatedb-nopasswd"
 
@@ -156,21 +164,20 @@ fi
 # ==============================================================================
 # 5. WG-SOCKS SETUP
 # ==============================================================================
-step "Setting up wg-socks manager..."
+step "Setting up wg-socks manager"
 
 if [[ -f "$DOTDIR/scripts/wg-socks.sh" ]]; then
     chmod +x "$DOTDIR/scripts/wg-socks.sh"
     sudo ln -sf "$DOTDIR/scripts/wg-socks.sh" "/usr/local/bin/wg-socks"
     ok "wg-socks linked to /usr/local/bin/wg-socks"
 else
-    err "wg-socks.sh not found in $DOTDIR/scripts/, skipping."
+    info "wg-socks script not found in $DOTDIR/scripts/"
 fi
 
 # ==============================================================================
 # DONE
 # ==============================================================================
-echo -e "\n${CYAN}  ================================================${RST}"
-echo -e "${GREEN}  Setup complete!${RST}"
-echo -e "${D_BLUE}  - Open a new terminal or run: source ~/.bashrc${RST}"
-echo -e "${D_BLUE}  - Note: Install a Nerd Font for full icon support${RST}"
-echo -e "${CYAN}  ================================================${RST}\n"
+_print_footer
+echo -e "  ${NORD_GREEN}Setup complete!${RST}"
+echo -e "  ${NORD_D_BLUE}>> Run: source ~/.bashrc${RST}"
+echo -e "  ${NORD_D_BLUE}>> Note: Install a Nerd Font for full icon support${RST}\n"

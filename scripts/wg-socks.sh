@@ -1,88 +1,105 @@
 #!/bin/bash
 
+# ==============================================================================
+# WIREGUARD SOCKS5 MANAGER (Nord Aesthetic)
+# ==============================================================================
+
 # Nord Colors
-CYAN='\033[38;2;143;188;187m'
-BLUE='\033[38;2;136;192;208m'
-D_BLUE='\033[38;2;129;161;193m'
-GREEN='\033[38;2;163;190;140m'
-RED='\033[38;2;191;97;106m'
-RST='\033[0m'
+NORD_POLAR_4='\e[38;2;76;86;106m'
+NORD_SNOW_1='\e[38;2;216;222;233m'
+NORD_CYAN='\e[38;2;143;188;187m'
+NORD_BLUE='\e[38;2;136;192;208m'
+NORD_D_BLUE='\e[38;2;129;161;193m'
+NORD_GREEN='\e[38;2;163;190;140m'
+NORD_RED='\e[38;2;191;97;106m'
+NORD_ORANGE='\e[38;2;208;135;112m'
+RST='\e[0m'
+
+HEADER_LINE="${NORD_POLAR_4}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RST}"
 
 BINARY_PATH="/usr/bin/wireproxy"
 CONF_DIR="/etc/wireproxy"
 
-# If not running as root, restart the script with sudo
+# Elevation check
 if [ "$EUID" -ne 0 ]; then
-    echo -e "${BLUE}󰒃  Elevating privileges for wg-socks...${RST}"
+    echo -e "\n  ${NORD_ORANGE}󰒃${RST}  ${NORD_SNOW_1}Elevating privileges for wg-socks...${RST}"
     exec sudo bash "$(realpath "$0")" "$@"
 fi
 
-# --- Helpers ---
+# --- UI Helpers ---
 
-print_header() {
-    echo -e "\n  ${CYAN}󰖂  $1${RST}"
-    echo -e "     ${D_BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RST}"
+_print_header() {
+    echo -e "\n  ${1}  ${NORD_SNOW_1}${2}${RST}"
+    echo -e "  ${HEADER_LINE}"
 }
 
-print_footer() {
-    echo -e "     ${D_BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RST}\n"
+_print_footer() {
+    echo -e "  ${HEADER_LINE}\n"
 }
 
-print_row() {
-    printf "     ${BLUE}%-2s ${D_BLUE} %-12s ${RST}${BLUE}%s${RST}\n" "$1" "$2" "$3"
+_print_row() {
+    printf "  ${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%s${RST} %-12s ${NORD_SNOW_1}%s${RST}\n" "$1" "$2" "$3"
 }
 
-print_ok()   { printf "     ${GREEN}󰄬  %s${RST}\n" "$1"; }
-print_err()  { printf "     ${RED}󰅙  %s${RST}\n" "$1"; }
-print_info() { printf "     ${BLUE}󰋼  %s${RST}\n" "$1"; }
+_print_status() {
+    local color=$NORD_BLUE
+    [[ "$1" == "󰄬" ]] && color=$NORD_GREEN
+    [[ "$1" == "󰅙" ]] && color=$NORD_RED
+    printf "  ${NORD_POLAR_4}│${RST}  ${color}%s${RST}  %s\n" "$1" "$2"
+}
 
 # --- Actions ---
 
 install_socks() {
     if [[ -z "$1" || -z "$2" ]]; then
-        print_header "Install Tunnel"
-        print_err "Usage: wg-socks install <config_path> <port>"
-        print_footer
-        exit 1
+        _print_header "${NORD_RED}󰅙${RST}" "Installation Error"
+        _print_status "󰅙" "Usage: wg-socks install <config_path> <port>"
+        _print_footer; exit 1
     fi
 
-    # Check wireproxy is installed
-    [[ -f "$BINARY_PATH" ]] || { print_err "wireproxy not found at $BINARY_PATH"; exit 1; }
+    [[ -f "$BINARY_PATH" ]] || {
+        _print_header "${NORD_RED}󰅙${RST}" "Missing Binary"
+        _print_status "󰅙" "wireproxy not found at $BINARY_PATH"
+        _print_footer; exit 1
+    }
 
-    # Validate config file
-    CONFIG_PATH=$(realpath "$1" 2>/dev/null) || { print_err "File not found: $1"; exit 1; }
-    [[ -f "$CONFIG_PATH" ]] || { print_err "Not a file: $CONFIG_PATH"; exit 1; }
+    CONFIG_PATH=$(realpath "$1" 2>/dev/null) || {
+        _print_header "${NORD_RED}󰅙${RST}" "File Error"
+        _print_status "󰅙" "File not found: $1"
+        _print_footer; exit 1
+    }
 
-    # Validate port
     PORT=$2
     if ! [[ "$PORT" =~ ^[0-9]+$ ]] || (( PORT < 1 || PORT > 65535 )); then
-        print_err "Invalid port '$PORT'. Must be a number between 1 and 65535."
-        exit 1
+        _print_header "${NORD_RED}󰅙${RST}" "Port Error"
+        _print_status "󰅙" "Invalid port: $PORT"
+        _print_footer; exit 1
     fi
 
-    # Check port not already in use
-    ss -tlnp | grep -q ":$PORT " && { print_err "Port $PORT is already in use."; exit 1; }
+    ss -tlnp | grep -q ":$PORT " && {
+        _print_header "${NORD_RED}󰅙${RST}" "Port Conflict"
+        _print_status "󰅙" "Port $PORT is already in use."
+        _print_footer; exit 1
+    }
 
-    CONFIG_BASE=$(basename "$CONFIG_PATH" .conf)
-    SERVICE_NAME="${CONFIG_BASE}-wgsocks"
-    CONF_DEST="$CONF_DIR/${CONFIG_BASE}.conf"
+    local CONFIG_BASE=$(basename "$CONFIG_PATH" .conf)
+    local SERVICE_NAME="${CONFIG_BASE}-wgsocks"
+    local CONF_DEST="$CONF_DIR/${CONFIG_BASE}.conf"
 
-    print_header "Installing Tunnel"
+    _print_header "${NORD_CYAN}󰖂${RST}" "Installing Tunnel: $CONFIG_BASE"
 
     mkdir -p "$CONF_DIR"
     cp "$CONFIG_PATH" "$CONF_DEST"
     chmod 600 "$CONF_DEST"
-    print_info "Config copied to $CONF_DEST"
+    _print_status "󰄬" "Config copied to $CONF_DIR"
 
-    # Port Injection
     if grep -q "BindAddress" "$CONF_DEST"; then
         sed -i "s/BindAddress = .*/BindAddress = 127.0.0.1:$PORT/" "$CONF_DEST"
     else
         echo -e "\n[Socks5]\nBindAddress = 127.0.0.1:$PORT" >> "$CONF_DEST"
     fi
-    print_info "SOCKS5 bound to 127.0.0.1:$PORT"
+    _print_status "󰄬" "SOCKS5 bound to 127.0.0.1:$PORT"
 
-    # Create Systemd Service
     cat <<EOF > /etc/systemd/system/${SERVICE_NAME}.service
 [Unit]
 Description=WireGuard Socks5 ($CONFIG_BASE)
@@ -102,124 +119,145 @@ EOF
     systemctl enable "$SERVICE_NAME" &>/dev/null
     systemctl restart "$SERVICE_NAME"
 
-    print_row "󰄬" "Service" "$SERVICE_NAME"
-    print_row "󰩟" "Port" "$PORT"
-    print_row "󰋊" "Status" "$(systemctl is-active "$SERVICE_NAME")"
-    print_footer
+    _print_row "󱄄" "Service" "$SERVICE_NAME"
+    _print_row "󰩟" "Port" "$PORT"
+    _print_row "󰋊" "Status" "$(systemctl is-active "$SERVICE_NAME")"
+    _print_footer
 }
 
 list_socks() {
     shopt -s nullglob
-    services=(/etc/systemd/system/*-wgsocks.service)
+    local services=(/etc/systemd/system/*-wgsocks.service)
 
-    print_header "Active Tunnels"
+    _print_header "${NORD_CYAN}󰖂${RST}" "Active SOCKS5 Tunnels"
 
     if [[ ${#services[@]} -eq 0 ]]; then
-        print_info "No tunnels found."
-        print_footer
-        return
+        _print_status "󰋼" "No tunnels found."
+        _print_footer; return
     fi
 
-    printf "     ${D_BLUE}%-30s %-12s %-10s${RST}\n" "SERVICE" "STATUS" "PORT"
-    echo -e "     ${D_BLUE}──────────────────────────────────────────────────${RST}"
+    printf "  ${NORD_POLAR_4}│${RST}  ${NORD_D_BLUE}%-25s %-12s %-10s${RST}\n" "SERVICE" "STATUS" "PORT"
+    echo -e "  ${NORD_POLAR_4}├─────────────────────────────────────────────────────${RST}"
 
     for service in "${services[@]}"; do
-        NAME=$(basename "$service" .service)
-        STATUS=$(systemctl is-active "$NAME")
-        CONF_FILE="$CONF_DIR/${NAME%-wgsocks}.conf"
-        PORT=$(grep "BindAddress" "$CONF_FILE" 2>/dev/null | tr -d ' ' | awk -F':' '{print $NF}')
+        local NAME=$(basename "$service" .service)
+        local STATUS=$(systemctl is-active "$NAME")
+        local CONF_FILE="$CONF_DIR/${NAME%-wgsocks}.conf"
+        local PORT=$(grep "BindAddress" "$CONF_FILE" 2>/dev/null | tr -d ' ' | awk -F':' '{print $NF}')
 
-        if [[ "$STATUS" == "active" ]]; then
-            STATUS_COLOR="${GREEN}${STATUS}${RST}"
-        else
-            STATUS_COLOR="${RED}${STATUS}${RST}"
-        fi
+        [[ "$STATUS" == "active" ]] && S_COL="${NORD_GREEN}" || S_COL="${NORD_RED}"
 
-        printf "     ${BLUE}%-30s${RST} ${STATUS_COLOR}%-$((12 - ${#STATUS}))s${RST} ${BLUE}%s${RST}\n" "$NAME" "" "$PORT"
+        printf "  ${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-25s${RST} ${S_COL}${STATUS}${RST}%-$((12 - ${#STATUS}))s ${NORD_SNOW_1}%s${RST}\n" "$NAME" "" "$PORT"
     done
-
-    print_footer
+    _print_footer
 }
 
 start_socks() {
-    [[ -z "$1" ]] && { print_err "Usage: wg-socks start <name>"; exit 1; }
-    NAME=$1
-    [[ "$NAME" != *-wgsocks ]] && NAME="${NAME}-wgsocks"
-    print_header "Starting Tunnel"
-    systemctl start "$NAME"
-    print_row "$(systemctl is-active "$NAME" | grep -q active && echo 󰄬 || echo 󰅙)" "Service" "$NAME"
-    print_row "󰋊" "Status" "$(systemctl is-active "$NAME")"
-    print_footer
+    if [[ -z "$1" ]]; then
+        _print_header "${NORD_RED}󰅙${RST}" "Error"
+        _print_status "󰅙" "Usage: wg-socks start <name>"
+        _print_footer; exit 1
+    fi
+    local NAME=${1%-wgsocks}
+    local SERVICE="${NAME}-wgsocks"
+    _print_header "${NORD_GREEN}󰐊${RST}" "Starting Tunnel"
+    systemctl start "$SERVICE"
+    _print_row "󰋊" "Service" "$SERVICE"
+    _print_row "󱄄" "Status" "$(systemctl is-active "$SERVICE")"
+    _print_footer
 }
 
 stop_socks() {
-    [[ -z "$1" ]] && { print_err "Usage: wg-socks stop <name>"; exit 1; }
-    NAME=$1
-    [[ "$NAME" != *-wgsocks ]] && NAME="${NAME}-wgsocks"
-    print_header "Stopping Tunnel"
-    systemctl stop "$NAME"
-    print_row "󰋊" "Service" "$NAME"
-    print_row "󰤭" "Status" "$(systemctl is-active "$NAME")"
-    print_footer
+    if [[ -z "$1" ]]; then
+        _print_header "${NORD_RED}󰅙${RST}" "Error"
+        _print_status "󰅙" "Usage: wg-socks stop <name>"
+        _print_footer; exit 1
+    fi
+    local NAME=${1%-wgsocks}
+    local SERVICE="${NAME}-wgsocks"
+    _print_header "${NORD_RED}󰓛${RST}" "Stopping Tunnel"
+    systemctl stop "$SERVICE"
+    _print_row "󰋊" "Service" "$SERVICE"
+    _print_row "󰤭" "Status" "$(systemctl is-active "$SERVICE")"
+    _print_footer
 }
 
 test_socks() {
-    NAME=$1
-    [[ -z "$NAME" ]] && { print_err "Usage: wg-socks test <name>"; exit 1; }
+    if [[ -z "$1" ]]; then
+        _print_header "${NORD_RED}󰅙${RST}" "Error"
+        _print_status "󰅙" "Usage: wg-socks test <name>"
+        _print_footer; exit 1
+    fi
+    local NAME=${1%-wgsocks}
+    local CONF_FILE="$CONF_DIR/${NAME}.conf"
+    [[ -f "$CONF_FILE" ]] || {
+        _print_header "${NORD_RED}󰅙${RST}" "Error"
+        _print_status "󰅙" "Config not found for '$NAME'"
+        _print_footer; exit 1
+    }
 
-    CONF_FILE="$CONF_DIR/${NAME%-wgsocks}.conf"
-    [[ -f "$CONF_FILE" ]] || { print_err "Config not found for '$NAME'"; exit 1; }
+    local PORT=$(grep "BindAddress" "$CONF_FILE" | tr -d ' ' | awk -F':' '{print $NF}')
 
-    PORT=$(grep "BindAddress" "$CONF_FILE" | tr -d ' ' | awk -F':' '{print $NF}')
-    [[ -z "$PORT" ]] && { print_err "Could not determine port from config."; exit 1; }
+    _print_header "${NORD_CYAN}󰛳${RST}" "Testing Tunnel: $NAME"
+    _print_status "󰒓" "Fetching public IP via port $PORT..."
 
-    print_header "Testing Tunnel"
-    print_info "Testing proxy on port $PORT..."
-
-    IP=$(curl -s --max-time 10 --socks5-hostname "127.0.0.1:$PORT" https://ifconfig.me 2>/dev/null \
-      || curl -s --max-time 10 --socks5-hostname "127.0.0.1:$PORT" https://api.ipify.org 2>/dev/null)
+    local IP
+    IP=$(curl -s --max-time 10 --socks5-hostname "127.0.0.1:$PORT" https://ifconfig.me 2>/dev/null) \
+    || IP=$(curl -s --max-time 10 --socks5-hostname "127.0.0.1:$PORT" https://api.ipify.org 2>/dev/null)
 
     if [[ -n "$IP" ]]; then
-        print_row "󰄬" "Status" "Proxy working"
-        print_row "󰩟" "Public IP" "$IP"
+        _print_row "󰄬" "SOCKS5" "Working"
+        _print_row "󰩟" "IP" "$IP"
     else
-        print_err "Test failed. Is the service running?"
-        print_info "Try: wg-socks logs ${NAME%-wgsocks}"
+        _print_status "󰅙" "Test failed. Is the service running?"
+        _print_status "󰋼" "Try: wg-socks logs $NAME"
     fi
-    print_footer
+    _print_footer
 }
 
 remove_socks() {
-    NAME=$1
-    [[ -z "$NAME" ]] && { print_err "Usage: wg-socks remove <name>"; exit 1; }
+    if [[ -z "$1" ]]; then
+        _print_header "${NORD_RED}󰅙${RST}" "Error"
+        _print_status "󰅙" "Usage: wg-socks remove <name>"
+        _print_footer; exit 1
+    fi
+    local NAME=${1%-wgsocks}
+    local SERVICE="${NAME}-wgsocks"
+    local SERVICE_FILE="/etc/systemd/system/${SERVICE}.service"
+    local CONF_FILE="$CONF_DIR/${NAME}.conf"
 
-    SERVICE_FILE="/etc/systemd/system/${NAME}.service"
-    CONF_FILE="$CONF_DIR/${NAME%-wgsocks}.conf"
+    [[ -f "$SERVICE_FILE" ]] || {
+        _print_header "${NORD_RED}󰅙${RST}" "Error"
+        _print_status "󰅙" "Service '$SERVICE' not found."
+        _print_footer; exit 1
+    }
 
-    [[ -f "$SERVICE_FILE" ]] || { print_err "Service '$NAME' not found."; exit 1; }
-
-    print_header "Remove Tunnel"
-    print_err "This will permanently remove $NAME."
-    printf "     ${BLUE}󰋼  Continue? [y/N]: ${RST}"
+    _print_header "${NORD_RED}󰆑${RST}" "Remove Tunnel"
+    _print_status "󰀦" "Danger: This will delete $SERVICE"
+    printf "  ${NORD_POLAR_4}│${RST}  ${NORD_SNOW_1}Confirm removal? [y/N]: ${RST}"
     read -r confirm
-    [[ "$confirm" =~ ^[Yy]$ ]] || { print_info "Aborted."; print_footer; exit 0; }
-
-    systemctl stop "$NAME"
-    systemctl disable "$NAME" &>/dev/null
-    rm -f "$SERVICE_FILE"
-    rm -f "$CONF_FILE"
-    systemctl daemon-reload
-
-    print_ok "Removed $NAME successfully."
-    print_footer
+    if [[ "$confirm" =~ ^[Yy]$ ]]; then
+        systemctl stop "$SERVICE"
+        systemctl disable "$SERVICE" &>/dev/null
+        rm -f "$SERVICE_FILE" "$CONF_FILE"
+        systemctl daemon-reload
+        _print_status "󰄬" "Removal complete."
+    else
+        _print_status "󰋼" "Aborted."
+    fi
+    _print_footer
 }
 
 show_logs() {
-    [[ -z "$1" ]] && { print_err "Usage: wg-socks logs <name>"; exit 1; }
-    NAME=$1
-    [[ "$NAME" != *-wgsocks ]] && NAME="${NAME}-wgsocks"
-    print_header "Logs: $NAME"
-    journalctl -u "$NAME" -f
+    if [[ -z "$1" ]]; then
+        _print_header "${NORD_RED}󰅙${RST}" "Error"
+        _print_status "󰅙" "Usage: wg-socks logs <name>"
+        _print_footer; exit 1
+    fi
+    local NAME=${1%-wgsocks}
+    local SERVICE="${NAME}-wgsocks"
+    _print_header "${NORD_BLUE}󰟠${RST}" "Logs: $SERVICE"
+    journalctl -u "$SERVICE" -f
 }
 
 # --- Router ---
@@ -232,16 +270,15 @@ case "$1" in
     logs)    show_logs "$2" ;;
     test)    test_socks "$2" ;;
     *)
-        echo -e "\n  ${CYAN}󰖂  WireGuard SOCKS5 Manager${RST}"
-        echo -e "     ${D_BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RST}"
-        printf "     ${BLUE}%-8s${RST} %-45s\n" "install" "<config_path> <port>  Install a new tunnel"
-        printf "     ${BLUE}%-8s${RST} %-45s\n" "list"    "                      List all tunnels"
-        printf "     ${BLUE}%-8s${RST} %-45s\n" "start"   "<name>                Start a tunnel"
-        printf "     ${BLUE}%-8s${RST} %-45s\n" "stop"    "<name>                Stop a tunnel"
-        printf "     ${BLUE}%-8s${RST} %-45s\n" "test"    "<name>                Test tunnel public IP"
-        printf "     ${BLUE}%-8s${RST} %-45s\n" "logs"    "<name>                Follow live logs"
-        printf "     ${BLUE}%-8s${RST} %-45s\n" "remove"  "<name>                Remove a tunnel"
-        echo -e "     ${D_BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RST}\n"
+        _print_header "${NORD_CYAN}󰖂${RST}" "WireGuard SOCKS5 Manager"
+        printf "  ${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "install" "<conf> <port>  Install new tunnel"
+        printf "  ${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "list"    "               List all tunnels"
+        printf "  ${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "start"   "<name>         Start tunnel"
+        printf "  ${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "stop"    "<name>         Stop tunnel"
+        printf "  ${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "test"    "<name>         Check public IP"
+        printf "  ${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "logs"    "<name>         Live log feed"
+        printf "  ${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "remove"  "<name>         Delete tunnel"
+        _print_footer
         exit 1
         ;;
 esac
