@@ -42,7 +42,7 @@ fi
 DOTDIR="$HOME/arch-config"
 
 echo -e "\n${NORD_CYAN}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${RST}"
-echo -e "${NORD_CYAN}┃${RST}          ${NORD_SNOW_1}Arch Dotfiles Setup${RST}          ${NORD_CYAN}┃${RST}"
+echo -e "${NORD_CYAN}┃${RST}          ${NORD_SNOW_1}Arch Dotfiles Setup${RST}               ${NORD_CYAN}┃${RST}"
 echo -e "${NORD_CYAN}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${RST}"
 
 _print_header "Pre-flight Checks"

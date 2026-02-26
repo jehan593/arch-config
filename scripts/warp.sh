@@ -27,7 +27,7 @@ TUNNEL="warp"
 
 # Elevation check
 if [ "$EUID" -ne 0 ]; then
-    echo -e "\n${NORD_ORANGE}󰒃${RST}  ${NORD_SNOW_1}Elevating privileges for warp...${RST}"
+    echo -e "\n${NORD_CYAN}󰮯${RST}  ${NORD_SNOW_1}Elevating privileges for WARP...${RST}"
     exec sudo bash "$(realpath "$0")" "$@"
 fi
 
@@ -71,7 +71,7 @@ warp_on() {
         _print_footer; exit 1
     fi
 
-    _print_header "${NORD_CYAN}󰖂${RST}" "WireGuard WARP"
+    _print_header "󰖂" "WireGuard WARP"
     if wg-quick up "$WARP_CONF" &>/dev/null; then
         _print_row "󰤨" "Status" "CONNECTED"
     else
@@ -81,7 +81,7 @@ warp_on() {
 }
 
 warp_off() {
-    _print_header "${NORD_RED}󰖂${RST}" "WireGuard WARP"
+    _print_header "󰖂" "WireGuard WARP"
     if wg-quick down "$WARP_CONF" &>/dev/null; then
         _print_row "󰤭" "Status" "DISCONNECTED"
     else
@@ -97,10 +97,10 @@ warp_rotate() {
         _print_footer; exit 1
     fi
 
-    _print_header "${NORD_CYAN}󰖂${RST}" "Rotating WARP Credentials"
+    _print_header "󰖂" "Rotating WARP Credentials"
 
     if ! command -v wgcf &>/dev/null; then
-        _print_status "󰅙" "wgcf not found. Install it first: yay -S wgcf"
+        _print_status "󰅙" "wgcf not found. Install it: yay -S wgcf"
         _print_footer; exit 1
     fi
 
@@ -108,13 +108,13 @@ warp_rotate() {
     cd "$WARP_DIR" || exit 1
 
     if [[ -f "$WARP_DIR/wgcf-account.toml" ]]; then
-        _print_status "󰒓" "Updating existing account..."
+        _print_status "󰚰" "Updating existing account..."
         if ! wgcf update &>/dev/null; then
             _print_status "󰅙" "Account update failed."
             _print_footer; exit 1
         fi
     else
-        _print_status "󰒓" "Registering new account..."
+        _print_status "󰀄" "Registering new account..."
         if ! wgcf register --accept-tos &>/dev/null; then
             _print_status "󰅙" "Account registration failed."
             _print_footer; exit 1
@@ -153,7 +153,7 @@ warp_rotate() {
 }
 
 warp_status() {
-    _print_header "${NORD_CYAN}󰖂${RST}" "WireGuard WARP Status"
+    _print_header "󰖂" "WireGuard WARP Status"
 
     if wg show "$TUNNEL" &>/dev/null; then
         _print_row "󰤨" "Status" "CONNECTED"
@@ -181,7 +181,7 @@ case "$1" in
     rotate) warp_rotate ;;
     status) warp_status ;;
     *)
-        _print_header "${NORD_CYAN}󰖂${RST}" "WireGuard WARP Manager"
+        _print_header "󰖂" "WireGuard WARP Manager"
         printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "on"     "Connect tunnel"
         printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "off"    "Disconnect tunnel"
         printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "rotate" "Rotate WARP credentials"

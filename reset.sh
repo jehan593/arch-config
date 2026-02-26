@@ -42,7 +42,7 @@ if [[ "$EUID" -eq 0 ]]; then
 fi
 
 echo -e "\n${NORD_RED}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${RST}"
-echo -e "${NORD_RED}┃${RST}           ${NORD_SNOW_1}Arch Dotfiles Reset${RST}           ${NORD_RED}┃${RST}"
+echo -e "${NORD_RED}┃${RST}           ${NORD_SNOW_1}Arch Dotfiles Reset${RST}              ${NORD_RED}┃${RST}"
 echo -e "${NORD_RED}┃${RST}      ${NORD_ORANGE}This will UNDO everything setup!${RST}      ${NORD_RED}┃${RST}"
 echo -e "${NORD_RED}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${RST}"
 

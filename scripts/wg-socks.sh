@@ -22,7 +22,7 @@ CONF_DIR="/etc/wireproxy"
 
 # Elevation check
 if [ "$EUID" -ne 0 ]; then
-    echo -e "\n${NORD_ORANGE}󰒃${RST}  ${NORD_SNOW_1}Elevating privileges for wg-socks...${RST}"
+    echo -e "\n${NORD_CYAN}󰮯${RST}  ${NORD_SNOW_1}Elevating privileges for wg-socks...${RST}"
     exec sudo bash "$(realpath "$0")" "$@"
 fi
 
@@ -95,19 +95,19 @@ install_socks() {
     local SERVICE_NAME="${CONFIG_BASE}-wgsocks"
     local CONF_DEST="$CONF_DIR/${CONFIG_BASE}.conf"
 
-    _print_header "${NORD_CYAN}󰖂${RST}" "Installing Tunnel: $CONFIG_BASE"
+    _print_header "󱌣" "Installing Tunnel: $CONFIG_BASE"
 
     mkdir -p "$CONF_DIR"
     cp "$CONFIG_PATH" "$CONF_DEST"
     chmod 600 "$CONF_DEST"
-    _print_row "󰄬" "Config" "Copied to $CONF_DIR"
+    _print_row "󰋊" "Config" "Copied to $CONF_DIR"
 
     if grep -q "BindAddress" "$CONF_DEST"; then
         sed -i "s/BindAddress = .*/BindAddress = 127.0.0.1:$PORT/" "$CONF_DEST"
     else
         echo -e "\n[Socks5]\nBindAddress = 127.0.0.1:$PORT" >> "$CONF_DEST"
     fi
-    _print_row "󰄬" "SOCKS5" "Bound to 127.0.0.1:$PORT"
+    _print_row "󰈀" "SOCKS5" "Bound to 127.0.0.1:$PORT"
 
     cat <<EOF > /etc/systemd/system/${SERVICE_NAME}.service
 [Unit]
@@ -130,7 +130,7 @@ EOF
 
     _print_row "󱄄" "Service" "$SERVICE_NAME"
     _print_row "󰩟" "Port" "$PORT"
-    _print_row "󰋊" "Status" "$(systemctl is-active "$SERVICE_NAME")"
+    _print_row "󰄬" "Status" "$(systemctl is-active "$SERVICE_NAME")"
     _print_footer
 }
 
@@ -138,7 +138,7 @@ list_socks() {
     shopt -s nullglob
     local services=(/etc/systemd/system/*-wgsocks.service)
 
-    _print_header "${NORD_CYAN}󰖂${RST}" "Active SOCKS5 Tunnels"
+    _print_header "󰒄" "Active SOCKS5 Tunnels"
 
     if [[ ${#services[@]} -eq 0 ]]; then
         _print_status "󰋼" "No tunnels found."
@@ -171,8 +171,8 @@ start_socks() {
     local SERVICE="${NAME}-wgsocks"
     _print_header "${NORD_GREEN}󰐊${RST}" "Starting Tunnel"
     _run "Start service" systemctl start "$SERVICE"
-    _print_row "󰋊" "Service" "$SERVICE"
-    _print_row "󱄄" "Status" "$(systemctl is-active "$SERVICE")"
+    _print_row "󱄄" "Service" "$SERVICE"
+    _print_row "󰄬" "Status" "$(systemctl is-active "$SERVICE")"
     _print_footer
 }
 
@@ -186,7 +186,7 @@ stop_socks() {
     local SERVICE="${NAME}-wgsocks"
     _print_header "${NORD_RED}󰓛${RST}" "Stopping Tunnel"
     _run "Stop service" systemctl stop "$SERVICE"
-    _print_row "󰋊" "Service" "$SERVICE"
+    _print_row "󱄄" "Service" "$SERVICE"
     _print_row "󰤭" "Status" "$(systemctl is-active "$SERVICE")"
     _print_footer
 }
@@ -207,7 +207,7 @@ test_socks() {
 
     local PORT=$(grep "BindAddress" "$CONF_FILE" | tr -d ' ' | awk -F':' '{print $NF}')
 
-    _print_header "${NORD_CYAN}󰛳${RST}" "Testing Tunnel: $NAME"
+    _print_header "󰛳" "Testing Tunnel: $NAME"
     _print_status "󰒓" "Fetching public IP via port $PORT..."
 
     local IP
@@ -265,7 +265,7 @@ show_logs() {
     fi
     local NAME=${1%-wgsocks}
     local SERVICE="${NAME}-wgsocks"
-    _print_header "${NORD_BLUE}󰟠${RST}" "Logs: $SERVICE"
+    _print_header "󰟠" "Logs: $SERVICE"
     journalctl -u "$SERVICE" -f
 }
 
@@ -279,7 +279,7 @@ case "$1" in
     logs)    show_logs "$2" ;;
     test)    test_socks "$2" ;;
     *)
-        _print_header "${NORD_CYAN}󰖂${RST}" "WireGuard SOCKS5 Manager"
+        _print_header "󰒄" "WireGuard SOCKS5 Manager"
         printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "install" "<conf> <port>  Install new tunnel"
         printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "list"    "               List all tunnels"
         printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "start"   "<n>      Start tunnel"

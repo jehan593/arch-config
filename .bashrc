@@ -71,13 +71,12 @@ alias lla='ls -al --color=auto'
 alias grep='grep --color=auto'
 command -v bat &>/dev/null && alias cat='bat'
 alias clear='clear && sys'
-alias reload='source ~/.bashrc'
-rr() { sudo $(fc -ln -1); }
+alias reload='source ~/.bashrc && echo -e "${NORD_GREEN}󰬷  Profile Reloaded!${RST}"'
+rr() { echo -e "${NORD_CYAN}󰮯  Elevating Last Command...${RST}"; sudo $(fc -ln -1); }
 alias conf='vim ~/.bashrc'
-alias confc='[[ -x $(command -v codium) ]] && codium ~/arch-config/ || echo "VSCodium not found."'
-alias upp='yay -Syu'
-alias upall='yay -Syu && upf'
-alias up-mirrors='sudo reflector --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist && sudo pacman -Syyu'
+alias confc='[[ -x $(command -v codium) ]] && (echo -e "${NORD_CYAN}󰨞  Opening Configs...${RST}" && codium ~/arch-config/) || echo -e "${NORD_RED}󰅙  VSCodium not found.${RST}"'
+alias upall='_print_header "󰚰" "Full System Update" && yay -Syu --noconfirm && upf'
+alias up-mirrors='_print_header "󰈀" "Updating Mirrors" && sudo reflector --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist && sudo pacman -Syyu'
 alias age='echo -e "${NORD_BLUE}󰃭  OS Age:${RST} $(( ($(date +%s) - $(stat -c %Y /lost+found 2>/dev/null || stat -c %Y /)) / 86400 )) days"'
 
 # ------------------------------------------------------------------------------
@@ -174,16 +173,16 @@ cup() {
     _print_header "${NORD_BLUE}󰏖${RST}" "Official Repos"
     local official_updates
     [[ -z "$chaotic_names" ]] && official_updates="$all_sync" || official_updates=$(echo "$all_sync" | grep -vFwf <(echo "$chaotic_names"))
-    [[ -z "$official_updates" ]] && echo "No official updates" || process_updates "$official_updates" "pacman" "true"
+    [[ -z "$official_updates" ]] && echo -e "󰄬  No official updates" || process_updates "$official_updates" "pacman" "true"
 
     _print_header "${NORD_CYAN}󰏖${RST}" "Chaotic-AUR"
     local chaotic_updates
     [[ -z "$chaotic_names" ]] && chaotic_updates="" || chaotic_updates=$(echo "$all_sync" | grep -Fwf <(echo "$chaotic_names"))
-    [[ -z "$chaotic_updates" ]] && echo "No Chaotic updates" || process_updates "$chaotic_updates" "pacman" "true"
+    [[ -z "$chaotic_updates" ]] && echo -e "󰄬  No Chaotic updates" || process_updates "$chaotic_updates" "pacman" "true"
 
     _print_header "${NORD_MAGENTA}󰏖${RST}" "AUR"
     local aur_updates=$(yay -Qua 2>/dev/null)
-    [[ -z "$aur_updates" ]] && echo "No AUR updates" || process_updates "$aur_updates" "yay" "false"
+    [[ -z "$aur_updates" ]] && echo -e "󰄬  No AUR updates" || process_updates "$aur_updates" "yay" "false"
     echo ""
 }
 
@@ -194,7 +193,7 @@ inst() {
     else
         local list=$(yay -Sl 2>/dev/null | awk '{print $1"/"$2}')
         [[ -z "$list" ]] && return 1
-        echo "$list" | fzf --exact --multi --preview-window=right:60%,hidden --header "CTRL-P: Preview | ENTER: Install" \
+        echo "$list" | fzf --exact --multi --preview-window=right:60%,hidden --header "󰏖 CTRL-P: Preview | ENTER: Install" \
             --bind 'ctrl-p:preview(
                 item={}; repo=${item%%/*}; pkg=${item#*/}
                 if [ "$repo" = "aur" ]; then yay -Siai "$pkg" 2>/dev/null; else yay -Sii "$pkg"; fi | \
@@ -208,7 +207,7 @@ uninst() {
         _print_header "${NORD_RED}󰆑${RST}" "Uninstalling Packages"
         sudo pacman -Rns "$@"
     else
-        yay -Qq | fzf --exact --multi --preview-window=down:75% --preview '
+        yay -Qq | fzf --exact --multi --preview-window=down:75% --header "󰆑 Select apps to UNINSTALL" --preview '
             yay -Qi {1} | awk "/^(Install Date|Installed Size)/ { stats = stats \"\033[1;31m\" \$0 \"\033[0m\n\" } !/^(Install Date|Installed Size)/ { body = body \$0 \"\n\" } END { printf \"%s%s\", stats, body }"
         ' | xargs -ro sudo pacman -Rns
     fi
@@ -217,10 +216,11 @@ uninst() {
 lpa() {
     local list=$(yay -Qq)
     [[ -z "$list" ]] && return 1
-    echo "$list" | fzf --exact --header "ENTER: Info | CTRL-C: Quit" --preview-window=right:65% \
+    echo "$list" | fzf --exact --header "󰘥 ENTER: Info | CTRL-C: Quit" --preview-window=right:65% \
         --preview 'yay -Qi {1} | awk "/^(Required By|Depends On)/ { print \"\033[1;35m\" \$0 \"\033[0m\" } !/^(Required By|Depends On)/ { print }"' \
         --bind 'enter:execute(yay -Qi {1} | less)'
 }
+
 
 # ------------------------------------------------------------------------------
 # 6. NETWORK & CONNECTIVITY
@@ -248,7 +248,7 @@ termux() {
     local end_ip=$1; local user="u0_a310"; local port="8022"; local base_ip="192.168.8."
     if [[ -z "$end_ip" ]]; then
         _print_header "${NORD_RED}󰄜${RST}" "Termux SSH"
-        _print_row "󰋼" "Usage" "termux <last_octet_or_full_ip>"
+        _print_row "󰋖" "Usage" "termux <last_octet_or_full_ip>"
         _print_footer
         return 1
     fi
@@ -274,7 +274,7 @@ upf() {
     {
         echo 'user_pref("browser.search.suggest.enabled", true);'
         echo 'user_pref("browser.contentblocking.category", "");'
-        echo 'user_pref("privacy.globalprivacycontrol.enabled", false);'
+        echo 'privacy.globalprivacycontrol.enabled", false);'
         echo 'user_pref("gfx.webrender.software",true);'
     } >> "$TEMP_FILE"
     local found=false
@@ -294,13 +294,56 @@ upc() {
     if git -C "$HOME/arch-config" pull --rebase --autostash &>/dev/null; then
         _print_row "󰊢" "Status" "Configs up to date!"
         _print_footer
-        echo ""
+        echo -e "${NORD_GREEN}󰬷  Sourcing updated profile...${RST}"
         source ~/.bashrc
     else
         _print_row "󰅙" "Status" "Update Failed"
         _print_footer
         return 1
     fi
+}
+
+upp() {
+    _print_header "${NORD_CYAN}󰏖${RST}" "System Update"
+    printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}1${RST}  All packages\n"
+    printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}2${RST}  Official repos only\n"
+    printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}3${RST}  Chaotic-AUR only\n"
+    printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}4${RST}  AUR only\n"
+    printf "${NORD_POLAR_4}│${RST}\n"
+    printf "${NORD_POLAR_4}│${RST}  ${NORD_SNOW_1}Choice [1-4]: ${RST}"
+    read -r choice
+    echo ""
+    case "$choice" in
+        1)
+            _print_header "${NORD_CYAN}󰑮${RST}" "Updating All Packages"
+            yay -Syu
+            ;;
+        2)
+            _print_header "${NORD_BLUE}󰊠${RST}" "Updating Official Repos"
+            local chaotic=$(pacman -Sl chaotic-aur 2>/dev/null | awk '{print $2}' | paste -sd,)
+            sudo pacman -Syu $( [[ -n "$chaotic" ]] && echo "--ignore $chaotic" )
+            ;;
+        3)
+            _print_header "${NORD_ORANGE}󱓞${RST}" "Updating Chaotic-AUR"
+            local updates=$(yay -Qu 2>/dev/null | grep -Fwf <(pacman -Sl chaotic-aur 2>/dev/null | awk '{print $2}'))
+            if [[ -z "$updates" ]]; then
+                _print_row "󰄬" "Status" "All Chaotic packages up to date"
+            else
+                _print_row "󰚰" "Updates" "Found $(echo "$updates" | wc -l) package(s)"
+                echo "$updates" | awk '{printf "│  %s\n", $0}'
+                echo ""
+                sudo pacman -S $(echo "$updates" | awk '{print $1}')
+            fi
+            ;;
+        4)
+            _print_header "${NORD_MAGENTA}󰀵${RST}" "Updating AUR Packages"
+            yay -Sua
+            ;;
+        *)
+            _print_row "󰅙" "Error" "Invalid choice"
+            ;;
+    esac
+    _print_footer
 }
 
 # ------------------------------------------------------------------------------
@@ -315,11 +358,11 @@ ff() {
     fi
     local search_path="${1:-$HOME}"
     if [[ -n $(find /var/lib/plocate/plocate.db -mmin +60 2>/dev/null) ]]; then
-        _print_row "󰒓" "Plocate" "Updating database..."
+        echo -e "${NORD_D_BLUE}󰒓  Plocate: Updating database...${RST}"
         sudo updatedb &>/dev/null
     fi
     clear
-    local selection=$(plocate "$search_path" | fzf --exact --prompt="󰍉 Search: " --height=40% --layout=reverse --header="ENTER: Open | ALT-C: Copy Path" --expect="alt-c")
+    local selection=$(plocate "$search_path" | fzf --exact --prompt="󰍉 Search: " --height=40% --layout=reverse --header="󰝰 ENTER: Open | ALT-C: Copy Path" --expect="alt-c")
     local key=$(echo "$selection" | head -n 1)
     local file=$(echo "$selection" | sed -n '2p')
     if [[ -n "$file" ]]; then
@@ -331,12 +374,12 @@ ff() {
                 echo -e "\n${NORD_RED}󰅙  No clipboard tool found.${RST}\n"
             fi
         else
-            [[ -d "$file" ]] && cd --silent "$file" || xdg-open "$file" >/dev/null 2>&1
+            [[ -d "$file" ]] && (echo -e "${NORD_GREEN}󰉺  Entering Directory...${RST}" && cd --silent "$file") || (echo -e "${NORD_CYAN}󰝰  Opening File...${RST}" && xdg-open "$file" >/dev/null 2>&1)
         fi
     fi
 }
 
-open() { xdg-open "${1:-.}" >/dev/null 2>&1; }
+open() { echo -e "${NORD_CYAN}󰝰  Opening...${RST}"; xdg-open "${1:-.}" >/dev/null 2>&1; }
 cd() { if [[ "$1" == "--silent" ]]; then builtin cd "$2"; else builtin cd "$@" && ls --color=auto; fi; }
 z() { if command -v __zoxide_z &>/dev/null; then __zoxide_z "$@" && ls --color=auto; else builtin cd "$@"; fi; }
 
@@ -345,9 +388,9 @@ z() { if command -v __zoxide_z &>/dev/null; then __zoxide_z "$@" && ls --color=a
 # ------------------------------------------------------------------------------
 pirith() {
     local DIR="$HOME/Music/pirith"
-    [[ -d "$DIR" ]] || { echo "Directory not found: $DIR"; return 1; }
+    [[ -d "$DIR" ]] || { echo -e "${NORD_RED}󰅙  Directory not found: $DIR${RST}"; return 1; }
     _print_header "${NORD_CYAN}󰎆${RST}" "Pirith Player"
-    local file=$(ls "$DIR"/*.mp3 2>/dev/null | fzf --prompt="󰎆 Select: ")
+    local file=$(ls "$DIR"/*.mp3 2>/dev/null | fzf --prompt="󰎆 Select: " --header "󰪐  Select to Play")
     if [[ -n "$file" ]]; then
         _print_row "󰝚" "Playing" "$(basename "$file")"
         _print_footer; mpv "$file"
@@ -356,12 +399,12 @@ pirith() {
 
 info() {
     _print_header "${NORD_CYAN}󱈄${RST}" "Custom Shell Commands"
-    printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" "System"   "sys, age, reload, conf, confc"
-    printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" "Packages" "upp, upall, cup, inst, uninst, lpa, cleanup"
-    [[ -f "$IDEAPAD_CONSERVATION" ]] && printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" "Hardware" "batt-on, batt-off"
-    printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" "Network"  "cdns-(on/off), warp, wg-socks, termux"
-    printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" "Utils"    "rr, ff, upf, upc, pirith, open"
-    printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" "Keybinds" "CTRL+H: history search"
+    printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" "󰒍 System"   "sys, age, reload, conf, confc"
+    printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" "󰏖 Packages" "upp, upall, cup, inst, uninst, lpa, cleanup"
+    [[ -f "$IDEAPAD_CONSERVATION" ]] && printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" "󱊟 Hardware" "batt-on, batt-off"
+    printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" "󰛳 Network"  "cdns-(on/off), warp, wg-socks, termux"
+    printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" " Utils"    "rr, ff, upf, upc, pirith, open"
+    printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" " Keybinds" "CTRL+H: history search"
     _print_footer
 }
 
