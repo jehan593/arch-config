@@ -71,7 +71,7 @@ warp_on() {
         _print_footer; exit 1
     fi
 
-    _print_header "󰖂" "WireGuard WARP"
+    _print_header "${NORD_CYAN}󰖂${RST}" "WireGuard WARP"
     if wg-quick up "$WARP_CONF" &>/dev/null; then
         _print_row "󰤨" "Status" "CONNECTED"
     else
@@ -81,7 +81,7 @@ warp_on() {
 }
 
 warp_off() {
-    _print_header "󰖂" "WireGuard WARP"
+    _print_header "${NORD_RED}󰖂${RST}" "WireGuard WARP"
     if wg-quick down "$WARP_CONF" &>/dev/null; then
         _print_row "󰤭" "Status" "DISCONNECTED"
     else
@@ -97,7 +97,7 @@ warp_rotate() {
         _print_footer; exit 1
     fi
 
-    _print_header "󰖂" "Rotating WARP Credentials"
+    _print_header "${NORD_CYAN}󰖂${RST}" "Rotating WARP Credentials"
 
     if ! command -v wgcf &>/dev/null; then
         _print_status "󰅙" "wgcf not found. Install it: yay -S wgcf"
@@ -153,7 +153,7 @@ warp_rotate() {
 }
 
 warp_status() {
-    _print_header "󰖂" "WireGuard WARP Status"
+    _print_header "${NORD_CYAN}󰖂${RST}" "WireGuard WARP Status"
 
     if wg show "$TUNNEL" &>/dev/null; then
         _print_row "󰤨" "Status" "CONNECTED"
@@ -181,7 +181,7 @@ case "$1" in
     rotate) warp_rotate ;;
     status) warp_status ;;
     *)
-        _print_header "󰖂" "WireGuard WARP Manager"
+        _print_header "${NORD_CYAN}󰖂${RST}" "WireGuard WARP Manager"
         printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "on"     "Connect tunnel"
         printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "off"    "Disconnect tunnel"
         printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "rotate" "Rotate WARP credentials"

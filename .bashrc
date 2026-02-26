@@ -214,9 +214,24 @@ uninst() {
 }
 
 lpa() {
-    local list=$(yay -Qq)
+    local source=$(printf "󰑮  All packages\n󰊠  Official repos only\n󱓞  Chaotic-AUR only\n󰀵  AUR only" | \
+        fzf --exact --height=6 --layout=reverse --border=rounded \
+            --color="bg:#2E3440,bg+:#3B4252,border:#88C0D0,fg:#D8DEE9,fg+:#ECEFF4,hl:#88C0D0,hl+:#88C0d0" \
+            --no-info --no-sort --no-input)
+
+    [[ -z "$source" ]] && return 0
+
+    local list
+    case "$source" in
+        *"All packages"*)      list=$(yay -Qq) ;;
+        *"Official repos only"*) list=$(pacman -Qqn | grep -vFwf <(pacman -Sl chaotic-aur 2>/dev/null | awk '{print $2}')) ;;
+        *"Chaotic-AUR only"*)  list=$(pacman -Sl chaotic-aur 2>/dev/null | grep '\[installed\]' | awk '{print $2}') ;;
+        *"AUR only"*)          list=$(pacman -Qm | awk '{print $1}') ;;
+    esac
+
     [[ -z "$list" ]] && return 1
-    echo "$list" | fzf --exact --header "󰘥 ENTER: Info | CTRL-C: Quit" --preview-window=right:65% \
+
+    echo "$list" | fzf --exact --header "ENTER: Info | CTRL-C: Quit" --preview-window=right:65% \
         --preview 'yay -Qi {1} | awk "/^(Required By|Depends On)/ { print \"\033[1;35m\" \$0 \"\033[0m\" } !/^(Required By|Depends On)/ { print }"' \
         --bind 'enter:execute(yay -Qi {1} | less)'
 }
@@ -274,7 +289,7 @@ upf() {
     {
         echo 'user_pref("browser.search.suggest.enabled", true);'
         echo 'user_pref("browser.contentblocking.category", "");'
-        echo 'privacy.globalprivacycontrol.enabled", false);'
+        echo 'user_pref("privacy.globalprivacycontrol.enabled", false);'
         echo 'user_pref("gfx.webrender.software",true);'
     } >> "$TEMP_FILE"
     local found=false
@@ -304,26 +319,25 @@ upc() {
 }
 
 upp() {
-    _print_header "${NORD_CYAN}󰏖${RST}" "System Update"
-    printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}1${RST}  All packages\n"
-    printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}2${RST}  Official repos only\n"
-    printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}3${RST}  Chaotic-AUR only\n"
-    printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}4${RST}  AUR only\n"
-    printf "${NORD_POLAR_4}│${RST}\n"
-    printf "${NORD_POLAR_4}│${RST}  ${NORD_SNOW_1}Choice [1-4]: ${RST}"
-    read -r choice
+    local choice=$(printf "󰑮  All packages\n󰊠  Official repos only\n󱓞  Chaotic-AUR only\n󰀵  AUR only" | \
+        fzf --exact --height=6 --layout=reverse --border=rounded \
+            --color="bg:#2E3440,bg+:#3B4252,border:#88C0D0,fg:#D8DEE9,fg+:#ECEFF4,hl:#88C0D0,hl+:#88C0D0" \
+            --no-info --no-sort --no-input)
+
+    [[ -z "$choice" ]] && return 0
     echo ""
+
     case "$choice" in
-        1)
+        *"All packages"*)
             _print_header "${NORD_CYAN}󰑮${RST}" "Updating All Packages"
             yay -Syu
             ;;
-        2)
+        *"Official repos only"*)
             _print_header "${NORD_BLUE}󰊠${RST}" "Updating Official Repos"
             local chaotic=$(pacman -Sl chaotic-aur 2>/dev/null | awk '{print $2}' | paste -sd,)
             sudo pacman -Syu $( [[ -n "$chaotic" ]] && echo "--ignore $chaotic" )
             ;;
-        3)
+        *"Chaotic-AUR only"*)
             _print_header "${NORD_ORANGE}󱓞${RST}" "Updating Chaotic-AUR"
             local updates=$(yay -Qu 2>/dev/null | grep -Fwf <(pacman -Sl chaotic-aur 2>/dev/null | awk '{print $2}'))
             if [[ -z "$updates" ]]; then
@@ -335,12 +349,9 @@ upp() {
                 sudo pacman -S $(echo "$updates" | awk '{print $1}')
             fi
             ;;
-        4)
+        *"AUR only"*)
             _print_header "${NORD_MAGENTA}󰀵${RST}" "Updating AUR Packages"
             yay -Sua
-            ;;
-        *)
-            _print_row "󰅙" "Error" "Invalid choice"
             ;;
     esac
     _print_footer
