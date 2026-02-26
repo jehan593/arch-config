@@ -19,31 +19,31 @@ HEADER_LINE="${NORD_POLAR_4}━━━━━━━━━━━━━━━━━�
 
 # --- UI Helpers ---
 _print_header() {
-    echo -e "\n  ${NORD_CYAN}>>${RST}  ${NORD_SNOW_1}${1}${RST}"
-    echo -e "  ${HEADER_LINE}"
+    echo -e "\n${NORD_CYAN}>>${RST}  ${NORD_SNOW_1}${1}${RST}"
+    echo -e "${HEADER_LINE}"
 }
 
 _print_footer() {
-    echo -e "  ${HEADER_LINE}\n"
+    echo -e "${HEADER_LINE}\n"
 }
 
-ok()   { printf "  ${NORD_POLAR_4}│${RST}  ${NORD_GREEN}[OK]${RST}    %s\n" "$1"; }
-info() { printf "  ${NORD_POLAR_4}│${RST}  ${NORD_BLUE}[INFO]${RST}  %s\n" "$1"; }
-err()  { printf "  ${NORD_POLAR_4}│${RST}  ${NORD_RED}[ERR]${RST}   %s\n" "$1"; }
+ok()   { printf "${NORD_POLAR_4}│${RST}  ${NORD_GREEN}[OK]${RST}    %s\n" "$1"; }
+info() { printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}[INFO]${RST}  %s\n" "$1"; }
+err()  { printf "${NORD_POLAR_4}│${RST}  ${NORD_RED}[ERR]${RST}   %s\n" "$1"; }
 step() { _print_footer; _print_header "$1"; }
 
 # --- Pre-flight checks ---
 
 if [[ "$EUID" -eq 0 ]]; then
-    echo -e "\n  ${NORD_RED}[ERR]  Do not run this script as root.${RST}\n"
+    echo -e "\n${NORD_RED}[ERR]  Do not run this script as root.${RST}\n"
     exit 1
 fi
 
 DOTDIR="$HOME/arch-config"
 
-echo -e "\n  ${NORD_CYAN}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${RST}"
-echo -e "  ${NORD_CYAN}┃${RST}          ${NORD_SNOW_1}Arch Dotfiles Setup${RST}          ${NORD_CYAN}┃${RST}"
-echo -e "  ${NORD_CYAN}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${RST}"
+echo -e "\n${NORD_CYAN}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${RST}"
+echo -e "${NORD_CYAN}┃${RST}          ${NORD_SNOW_1}Arch Dotfiles Setup${RST}          ${NORD_CYAN}┃${RST}"
+echo -e "${NORD_CYAN}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${RST}"
 
 _print_header "Pre-flight Checks"
 
@@ -79,6 +79,7 @@ step "Installing dependencies"
 
 DEPENDENCIES=(
     "wireproxy"
+    "wgcf"
     "bat"
     "plocate"
     "curl"
@@ -114,11 +115,15 @@ ok "Linked .bashrc -> ~/.bashrc"
 ln -sf "$DOTDIR/.vimrc" "$HOME/.vimrc"
 ok "Linked .vimrc -> ~/.vimrc"
 
-# .config symlinks
-for item in "$DOTDIR/.config/"*; do
-    target="$HOME/.config/$(basename "$item")"
-    ln -sf "$item" "$target"
-    ok "Linked $(basename "$item") -> ~/.config/$(basename "$item")"
+# .config symlinks - link files only, not folders
+for item in "$DOTDIR/.config/"*/; do
+    dir=$(basename "$item")
+    mkdir -p "$HOME/.config/$dir"
+    for file in "$item"*; do
+        [[ -f "$file" ]] || continue
+        ln -sf "$file" "$HOME/.config/$dir/$(basename "$file")"
+        ok "Linked $dir/$(basename "$file") -> ~/.config/$dir/$(basename "$file")"
+    done
 done
 
 # Nord vim theme
@@ -175,9 +180,22 @@ else
 fi
 
 # ==============================================================================
+# 6. WARP SETUP
+# ==============================================================================
+step "Setting up warp manager"
+
+if [[ -f "$DOTDIR/scripts/warp.sh" ]]; then
+    chmod +x "$DOTDIR/scripts/warp.sh"
+    sudo ln -sf "$DOTDIR/scripts/warp.sh" "/usr/local/bin/warp"
+    ok "warp linked to /usr/local/bin/warp"
+else
+    info "warp.sh not found in $DOTDIR/scripts/"
+fi
+
+# ==============================================================================
 # DONE
 # ==============================================================================
 _print_footer
-echo -e "  ${NORD_GREEN}Setup complete!${RST}"
-echo -e "  ${NORD_D_BLUE}>> Run: source ~/.bashrc${RST}"
-echo -e "  ${NORD_D_BLUE}>> Note: Install a Nerd Font for full icon support${RST}\n"
+echo -e "${NORD_GREEN}Setup complete!${RST}"
+echo -e "${NORD_D_BLUE}>> Run: source ~/.bashrc${RST}"
+echo -e "${NORD_D_BLUE}>> Note: Install a Nerd Font for full icon support${RST}\n"

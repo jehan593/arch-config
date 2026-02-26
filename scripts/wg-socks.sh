@@ -22,30 +22,39 @@ CONF_DIR="/etc/wireproxy"
 
 # Elevation check
 if [ "$EUID" -ne 0 ]; then
-    echo -e "\n  ${NORD_ORANGE}󰒃${RST}  ${NORD_SNOW_1}Elevating privileges for wg-socks...${RST}"
+    echo -e "\n${NORD_ORANGE}󰒃${RST}  ${NORD_SNOW_1}Elevating privileges for wg-socks...${RST}"
     exec sudo bash "$(realpath "$0")" "$@"
 fi
 
 # --- UI Helpers ---
 
 _print_header() {
-    echo -e "\n  ${1}  ${NORD_SNOW_1}${2}${RST}"
-    echo -e "  ${HEADER_LINE}"
+    echo -e "\n${1}  ${NORD_SNOW_1}${2}${RST}"
+    echo -e "${HEADER_LINE}"
 }
 
 _print_footer() {
-    echo -e "  ${HEADER_LINE}\n"
+    echo -e "${HEADER_LINE}\n"
 }
 
 _print_row() {
-    printf "  ${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%s${RST} %-12s ${NORD_SNOW_1}%s${RST}\n" "$1" "$2" "$3"
+    printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%s${RST} %-12s ${NORD_SNOW_1}%s${RST}\n" "$1" "$2" "$3"
 }
 
 _print_status() {
     local color=$NORD_BLUE
     [[ "$1" == "󰄬" ]] && color=$NORD_GREEN
     [[ "$1" == "󰅙" ]] && color=$NORD_RED
-    printf "  ${NORD_POLAR_4}│${RST}  ${color}%s${RST}  %s\n" "$1" "$2"
+    printf "${NORD_POLAR_4}│${RST}  ${color}%s${RST}  %s\n" "$1" "$2"
+}
+
+_run() {
+    local label="$1"; shift
+    if "$@" &>/dev/null; then
+        _print_row "󰄬" "$label" "Done"
+    else
+        _print_row "󰅙" "$label" "Failed"
+    fi
 }
 
 # --- Actions ---
@@ -91,14 +100,14 @@ install_socks() {
     mkdir -p "$CONF_DIR"
     cp "$CONFIG_PATH" "$CONF_DEST"
     chmod 600 "$CONF_DEST"
-    _print_status "󰄬" "Config copied to $CONF_DIR"
+    _print_row "󰄬" "Config" "Copied to $CONF_DIR"
 
     if grep -q "BindAddress" "$CONF_DEST"; then
         sed -i "s/BindAddress = .*/BindAddress = 127.0.0.1:$PORT/" "$CONF_DEST"
     else
         echo -e "\n[Socks5]\nBindAddress = 127.0.0.1:$PORT" >> "$CONF_DEST"
     fi
-    _print_status "󰄬" "SOCKS5 bound to 127.0.0.1:$PORT"
+    _print_row "󰄬" "SOCKS5" "Bound to 127.0.0.1:$PORT"
 
     cat <<EOF > /etc/systemd/system/${SERVICE_NAME}.service
 [Unit]
@@ -115,9 +124,9 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
 
-    systemctl daemon-reload
-    systemctl enable "$SERVICE_NAME" &>/dev/null
-    systemctl restart "$SERVICE_NAME"
+    _run "Daemon reload" systemctl daemon-reload
+    _run "Enable service" systemctl enable "$SERVICE_NAME"
+    _run "Start service" systemctl restart "$SERVICE_NAME"
 
     _print_row "󱄄" "Service" "$SERVICE_NAME"
     _print_row "󰩟" "Port" "$PORT"
@@ -136,8 +145,8 @@ list_socks() {
         _print_footer; return
     fi
 
-    printf "  ${NORD_POLAR_4}│${RST}  ${NORD_D_BLUE}%-25s %-12s %-10s${RST}\n" "SERVICE" "STATUS" "PORT"
-    echo -e "  ${NORD_POLAR_4}├─────────────────────────────────────────────────────${RST}"
+    printf "${NORD_POLAR_4}│${RST}  ${NORD_D_BLUE}%-25s %-12s %-10s${RST}\n" "SERVICE" "STATUS" "PORT"
+    echo -e "${NORD_POLAR_4}├─────────────────────────────────────────────────────${RST}"
 
     for service in "${services[@]}"; do
         local NAME=$(basename "$service" .service)
@@ -147,7 +156,7 @@ list_socks() {
 
         [[ "$STATUS" == "active" ]] && S_COL="${NORD_GREEN}" || S_COL="${NORD_RED}"
 
-        printf "  ${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-25s${RST} ${S_COL}${STATUS}${RST}%-$((12 - ${#STATUS}))s ${NORD_SNOW_1}%s${RST}\n" "$NAME" "" "$PORT"
+        printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-25s${RST} ${S_COL}${STATUS}${RST}%-$((12 - ${#STATUS}))s ${NORD_SNOW_1}%s${RST}\n" "$NAME" "" "$PORT"
     done
     _print_footer
 }
@@ -155,13 +164,13 @@ list_socks() {
 start_socks() {
     if [[ -z "$1" ]]; then
         _print_header "${NORD_RED}󰅙${RST}" "Error"
-        _print_status "󰅙" "Usage: wg-socks start <name>"
+        _print_status "󰅙" "Usage: wg-socks start <n>"
         _print_footer; exit 1
     fi
     local NAME=${1%-wgsocks}
     local SERVICE="${NAME}-wgsocks"
     _print_header "${NORD_GREEN}󰐊${RST}" "Starting Tunnel"
-    systemctl start "$SERVICE"
+    _run "Start service" systemctl start "$SERVICE"
     _print_row "󰋊" "Service" "$SERVICE"
     _print_row "󱄄" "Status" "$(systemctl is-active "$SERVICE")"
     _print_footer
@@ -170,13 +179,13 @@ start_socks() {
 stop_socks() {
     if [[ -z "$1" ]]; then
         _print_header "${NORD_RED}󰅙${RST}" "Error"
-        _print_status "󰅙" "Usage: wg-socks stop <name>"
+        _print_status "󰅙" "Usage: wg-socks stop <n>"
         _print_footer; exit 1
     fi
     local NAME=${1%-wgsocks}
     local SERVICE="${NAME}-wgsocks"
     _print_header "${NORD_RED}󰓛${RST}" "Stopping Tunnel"
-    systemctl stop "$SERVICE"
+    _run "Stop service" systemctl stop "$SERVICE"
     _print_row "󰋊" "Service" "$SERVICE"
     _print_row "󰤭" "Status" "$(systemctl is-active "$SERVICE")"
     _print_footer
@@ -185,7 +194,7 @@ stop_socks() {
 test_socks() {
     if [[ -z "$1" ]]; then
         _print_header "${NORD_RED}󰅙${RST}" "Error"
-        _print_status "󰅙" "Usage: wg-socks test <name>"
+        _print_status "󰅙" "Usage: wg-socks test <n>"
         _print_footer; exit 1
     fi
     local NAME=${1%-wgsocks}
@@ -218,7 +227,7 @@ test_socks() {
 remove_socks() {
     if [[ -z "$1" ]]; then
         _print_header "${NORD_RED}󰅙${RST}" "Error"
-        _print_status "󰅙" "Usage: wg-socks remove <name>"
+        _print_status "󰅙" "Usage: wg-socks remove <n>"
         _print_footer; exit 1
     fi
     local NAME=${1%-wgsocks}
@@ -234,13 +243,13 @@ remove_socks() {
 
     _print_header "${NORD_RED}󰆑${RST}" "Remove Tunnel"
     _print_status "󰀦" "Danger: This will delete $SERVICE"
-    printf "  ${NORD_POLAR_4}│${RST}  ${NORD_SNOW_1}Confirm removal? [y/N]: ${RST}"
+    printf "${NORD_POLAR_4}│${RST}  ${NORD_SNOW_1}Confirm removal? [y/N]: ${RST}"
     read -r confirm
     if [[ "$confirm" =~ ^[Yy]$ ]]; then
-        systemctl stop "$SERVICE"
-        systemctl disable "$SERVICE" &>/dev/null
+        _run "Stop service" systemctl stop "$SERVICE"
+        _run "Disable service" systemctl disable "$SERVICE"
         rm -f "$SERVICE_FILE" "$CONF_FILE"
-        systemctl daemon-reload
+        _run "Daemon reload" systemctl daemon-reload
         _print_status "󰄬" "Removal complete."
     else
         _print_status "󰋼" "Aborted."
@@ -251,7 +260,7 @@ remove_socks() {
 show_logs() {
     if [[ -z "$1" ]]; then
         _print_header "${NORD_RED}󰅙${RST}" "Error"
-        _print_status "󰅙" "Usage: wg-socks logs <name>"
+        _print_status "󰅙" "Usage: wg-socks logs <n>"
         _print_footer; exit 1
     fi
     local NAME=${1%-wgsocks}
@@ -271,13 +280,13 @@ case "$1" in
     test)    test_socks "$2" ;;
     *)
         _print_header "${NORD_CYAN}󰖂${RST}" "WireGuard SOCKS5 Manager"
-        printf "  ${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "install" "<conf> <port>  Install new tunnel"
-        printf "  ${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "list"    "               List all tunnels"
-        printf "  ${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "start"   "<name>         Start tunnel"
-        printf "  ${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "stop"    "<name>         Stop tunnel"
-        printf "  ${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "test"    "<name>         Check public IP"
-        printf "  ${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "logs"    "<name>         Live log feed"
-        printf "  ${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "remove"  "<name>         Delete tunnel"
+        printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "install" "<conf> <port>  Install new tunnel"
+        printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "list"    "               List all tunnels"
+        printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "start"   "<n>      Start tunnel"
+        printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "stop"    "<n>      Stop tunnel"
+        printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "test"    "<n>      Check public IP"
+        printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "logs"    "<n>      Live log feed"
+        printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "remove"  "<n>      Delete tunnel"
         _print_footer
         exit 1
         ;;

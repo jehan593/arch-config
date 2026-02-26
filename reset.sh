@@ -20,35 +20,34 @@ HEADER_LINE="${NORD_POLAR_4}━━━━━━━━━━━━━━━━━�
 DOTDIR="$HOME/arch-config"
 
 # --- UI Helpers ---
-
 _print_header() {
-    echo -e "\n  ${NORD_RED}!!${RST}  ${NORD_SNOW_1}${1}${RST}"
-    echo -e "  ${HEADER_LINE}"
+    echo -e "\n${NORD_RED}!!${RST}  ${NORD_SNOW_1}${1}${RST}"
+    echo -e "${HEADER_LINE}"
 }
 
 _print_footer() {
-    echo -e "  ${HEADER_LINE}\n"
+    echo -e "${HEADER_LINE}\n"
 }
 
-ok()   { printf "  ${NORD_POLAR_4}│${RST}  ${NORD_GREEN}[OK]${RST}    %s\n" "$1"; }
-info() { printf "  ${NORD_POLAR_4}│${RST}  ${NORD_BLUE}[INFO]${RST}  %s\n" "$1"; }
-err()  { printf "  ${NORD_POLAR_4}│${RST}  ${NORD_RED}[ERR]${RST}   %s\n" "$1"; }
+ok()   { printf "${NORD_POLAR_4}│${RST}  ${NORD_GREEN}[OK]${RST}    %s\n" "$1"; }
+info() { printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}[INFO]${RST}  %s\n" "$1"; }
+err()  { printf "${NORD_POLAR_4}│${RST}  ${NORD_RED}[ERR]${RST}   %s\n" "$1"; }
 step() { _print_footer; _print_header "$1"; }
 
 # --- Pre-flight checks ---
 
 if [[ "$EUID" -eq 0 ]]; then
-    echo -e "\n  ${NORD_RED}[ERR]  Do not run this script as root.${RST}\n"
+    echo -e "\n${NORD_RED}[ERR]  Do not run this script as root.${RST}\n"
     exit 1
 fi
 
-echo -e "\n  ${NORD_RED}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${RST}"
-echo -e "  ${NORD_RED}┃${RST}           ${NORD_SNOW_1}Arch Dotfiles Reset${RST}           ${NORD_RED}┃${RST}"
-echo -e "  ${NORD_RED}┃${RST}      ${NORD_ORANGE}This will UNDO everything setup!${RST}      ${NORD_RED}┃${RST}"
-echo -e "  ${NORD_RED}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${RST}"
+echo -e "\n${NORD_RED}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${RST}"
+echo -e "${NORD_RED}┃${RST}           ${NORD_SNOW_1}Arch Dotfiles Reset${RST}           ${NORD_RED}┃${RST}"
+echo -e "${NORD_RED}┃${RST}      ${NORD_ORANGE}This will UNDO everything setup!${RST}      ${NORD_RED}┃${RST}"
+echo -e "${NORD_RED}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${RST}"
 
 _print_header "Pre-flight"
-printf "  ${NORD_POLAR_4}│${RST}  ${NORD_ORANGE}[WARN]${RST}  Are you sure you want to reset? [y/N]: "
+printf "${NORD_POLAR_4}│${RST}  ${NORD_ORANGE}[WARN]${RST}  Are you sure you want to reset? [y/N]: "
 read -r confirm
 [[ "$confirm" =~ ^[Yy]$ ]] || { info "Aborted."; _print_footer; exit 0; }
 
@@ -67,16 +66,20 @@ for file in .bashrc .vimrc; do
     fi
 done
 
-# .config symlinks
+# .config symlinks - files only
 if [[ -d "$DOTDIR/.config" ]]; then
-    for item in "$DOTDIR/.config/"*; do
-        target="$HOME/.config/$(basename "$item")"
-        if [[ -L "$target" ]]; then
-            rm "$target"
-            ok "Removed symlink: ~/.config/$(basename "$item")"
-        else
-            info "Not a symlink, skipping: ~/.config/$(basename "$item")"
-        fi
+    for item in "$DOTDIR/.config/"*/; do
+        dir=$(basename "$item")
+        for file in "$item"*; do
+            [[ -f "$file" ]] || continue
+            target="$HOME/.config/$dir/$(basename "$file")"
+            if [[ -L "$target" ]]; then
+                rm "$target"
+                ok "Removed symlink: ~/.config/$dir/$(basename "$file")"
+            else
+                info "Not a symlink, skipping: ~/.config/$dir/$(basename "$file")"
+            fi
+        done
     done
 else
     info "No .config directory found in repo, skipping."
@@ -120,7 +123,33 @@ else
 fi
 
 # ==============================================================================
-# 5. BACKUP WIREPROXY CONFIGS
+# 5. STOP WARP TUNNEL
+# ==============================================================================
+step "Stopping warp tunnel"
+
+if sudo wg show warp &>/dev/null; then
+    sudo wg-quick down "$HOME/.config/warp/warp.conf" &>/dev/null
+    ok "Warp tunnel stopped."
+else
+    info "Warp tunnel not running, skipping."
+fi
+
+if [[ -f "$HOME/.config/warp/warp.conf" ]]; then
+    cp "$HOME/.config/warp/warp.conf" "$HOME/Desktop/warp-backup-$(date +%Y%m%d_%H%M%S).conf"
+    ok "Warp config backed up to Desktop."
+    rm -rf "$HOME/.config/warp"
+    ok "Removed ~/.config/warp"
+fi
+
+if [[ -L "/usr/local/bin/warp" ]]; then
+    sudo rm -f "/usr/local/bin/warp"
+    ok "Removed warp from /usr/local/bin."
+else
+    info "warp symlink not found, skipping."
+fi
+
+# ==============================================================================
+# 6. BACKUP WIREPROXY CONFIGS
 # ==============================================================================
 step "Backing up wireproxy configs"
 
@@ -136,7 +165,7 @@ else
 fi
 
 # ==============================================================================
-# 6. REMOVE WG-SOCKS
+# 7. REMOVE WG-SOCKS
 # ==============================================================================
 step "Removing wg-socks"
 
@@ -166,19 +195,19 @@ else
 fi
 
 # ==============================================================================
-# 7. OPTIONALLY REMOVE PACKAGES
+# 8. OPTIONALLY REMOVE PACKAGES
 # ==============================================================================
 step "Optional: Package Removal"
 
-printf "  ${NORD_POLAR_4}│${RST}  ${NORD_D_BLUE}Targets: wireproxy bat plocate gvim starship fzf zoxide mpv...${RST}\n"
-printf "  ${NORD_POLAR_4}│${RST}\n"
-printf "  ${NORD_POLAR_4}│${RST}  ${NORD_SNOW_1}Remove these packages? [y/N]: ${RST}"
+printf "${NORD_POLAR_4}│${RST}  ${NORD_D_BLUE}Targets: wireproxy wgcf bat plocate gvim starship fzf zoxide mpv...${RST}\n"
+printf "${NORD_POLAR_4}│${RST}\n"
+printf "${NORD_POLAR_4}│${RST}  ${NORD_SNOW_1}Remove these packages? [y/N]: ${RST}"
 read -r remove_pkgs
 
 if [[ "$remove_pkgs" =~ ^[Yy]$ ]]; then
     info "Uninstalling packages..."
     yay -Rns --noconfirm \
-        wireproxy bat plocate gvim starship fzf zoxide mpv \
+        wireproxy wgcf bat plocate gvim starship fzf zoxide mpv \
         wl-clipboard xclip reflector pacman-contrib 2>/dev/null
     ok "Packages removed."
 else
@@ -189,6 +218,6 @@ fi
 # DONE
 # ==============================================================================
 _print_footer
-echo -e "  ${NORD_GREEN}Reset complete!${RST}"
-echo -e "  ${NORD_D_BLUE}>> Your dotfiles repository remains intact.${RST}"
-echo -e "  ${NORD_D_BLUE}>> Open a new terminal session to finish.${RST}\n"
+echo -e "${NORD_GREEN}Reset complete!${RST}"
+echo -e "${NORD_D_BLUE}>> Your dotfiles repository remains intact.${RST}"
+echo -e "${NORD_D_BLUE}>> Open a new terminal session to finish.${RST}\n"
