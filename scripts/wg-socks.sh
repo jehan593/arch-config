@@ -269,6 +269,25 @@ show_logs() {
     journalctl -u "$SERVICE" -f
 }
 
+refresh_socks() {
+    shopt -s nullglob
+    local services=(/etc/systemd/system/*-wgsocks.service)
+
+    _print_header "${NORD_CYAN}󰑮${RST}" "Refreshing wg-socks Tunnels"
+
+    if [[ ${#services[@]} -eq 0 ]]; then
+        _print_status "󰋼" "No tunnels found."
+        _print_footer; return
+    fi
+
+    for service in "${services[@]}"; do
+        local NAME=$(basename "$service" .service)
+        _run "Restart $NAME" systemctl restart "$NAME"
+    done
+
+    _print_footer
+}
+
 # --- Router ---
 case "$1" in
     install) install_socks "$2" "$3" ;;
@@ -278,6 +297,7 @@ case "$1" in
     remove)  remove_socks "$2" ;;
     logs)    show_logs "$2" ;;
     test)    test_socks "$2" ;;
+    refresh) refresh_socks ;;
     *)
         _print_header "${NORD_CYAN}󰒄${RST}" "WireGuard SOCKS5 Manager"
         printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "install" "<conf> <port>  Install new tunnel"
@@ -287,6 +307,7 @@ case "$1" in
         printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "test"    "<n>      Check public IP"
         printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "logs"    "<n>      Live log feed"
         printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "remove"  "<n>      Delete tunnel"
+        printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "refresh" "               Restart all tunnels"
         _print_footer
         exit 1
         ;;
