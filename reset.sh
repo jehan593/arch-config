@@ -195,6 +195,16 @@ else
 fi
 
 # ==============================================================================
+# REMOVE PACMAN CANDY
+# ==============================================================================
+if grep -q "ILoveCandy" /etc/pacman.conf; then
+    sudo sed -i '/^ILoveCandy/d' /etc/pacman.conf
+    ok "ILoveCandy removed from pacman.conf"
+else
+    info "ILoveCandy not found, skipping."
+fi
+
+# ==============================================================================
 # 8. OPTIONALLY REMOVE PACKAGES
 # ==============================================================================
 step "Optional: Package Removal"

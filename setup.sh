@@ -167,6 +167,19 @@ else
 fi
 
 # ==============================================================================
+# 4.5 PACMAN CANDY
+# ==============================================================================
+step "Configuring pacman"
+
+if ! grep -q "ILoveCandy" /etc/pacman.conf; then
+    sudo sed -i 's/^#Color/Color/' /etc/pacman.conf
+    sudo sed -i '/^Color/a ILoveCandy' /etc/pacman.conf
+    ok "Color + ILoveCandy added to pacman.conf"
+else
+    ok "ILoveCandy already set."
+fi
+
+# ==============================================================================
 # 5. WG-SOCKS SETUP
 # ==============================================================================
 step "Setting up wg-socks manager"
