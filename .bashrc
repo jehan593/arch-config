@@ -207,33 +207,27 @@ uninst() {
         _print_header "${NORD_RED}󰆑${RST}" "Uninstalling Packages"
         sudo pacman -Rns "$@"
     else
-        yay -Qq | fzf --exact --multi --preview-window=down:75% --header "󰆑 Select apps to UNINSTALL" --preview '
-            yay -Qi {1} | awk "/^(Install Date|Installed Size)/ { stats = stats \"\033[1;31m\" \$0 \"\033[0m\n\" } !/^(Install Date|Installed Size)/ { body = body \$0 \"\n\" } END { printf \"%s%s\", stats, body }"
-        ' | xargs -ro sudo pacman -Rns
+        {
+            pacman -Qqn | grep -vFwf <(pacman -Sl chaotic-aur 2>/dev/null | awk '{print $2}') | awk '{print "core/" $1}'
+            pacman -Sl chaotic-aur 2>/dev/null | grep '\[installed\]' | awk '{print "chaotic-aur/" $2}'
+            pacman -Qm | awk '{print "aur/" $1}'
+        } | fzf --exact --multi --preview-window=right:60% --header "󰆑 Select apps to UNINSTALL" \
+            --preview 'echo {} | awk -F/ "{print \$2}" | xargs yay -Qi 2>/dev/null | awk "/^(Install Date|Installed Size)/ { stats = stats \"\033[1;31m\" \$0 \"\033[0m\n\" } !/^(Install Date|Installed Size)/ { body = body \$0 \"\n\" } END { printf \"%s%s\", stats, body }"' \
+            | awk -F/ '{print $2}' | xargs -ro sudo pacman -Rns
     fi
 }
 
 lpa() {
-    local source=$(printf "󰑮  All packages\n󰊠  Official repos only\n󱓞  Chaotic-AUR only\n󰀵  AUR only" | \
-        fzf --exact --height=6 --layout=reverse --border=rounded \
-            --color="bg:#2E3440,bg+:#3B4252,border:#88C0D0,fg:#D8DEE9,fg+:#ECEFF4,hl:#88C0D0,hl+:#88C0d0" \
-            --no-info --no-sort --no-input)
+    local selection=$({
+        pacman -Qqn | grep -vFwf <(pacman -Sl chaotic-aur 2>/dev/null | awk '{print $2}') | awk '{print "core/" $1}'
+        pacman -Sl chaotic-aur 2>/dev/null | grep '\[installed\]' | awk '{print "chaotic-aur/" $2}'
+        pacman -Qm | awk '{print "aur/" $1}'
+    } | fzf --exact --header "ENTER: Info | CTRL-C: Quit" --preview-window=right:60% \
+        --preview 'echo {} | awk -F/ "{print \$2}" | xargs yay -Qi 2>/dev/null | awk "/^(Required By|Depends On)/ { print \"\033[1;35m\" \$0 \"\033[0m\" } !/^(Required By|Depends On)/ { print }"')
 
-    [[ -z "$source" ]] && return 0
-
-    local list
-    case "$source" in
-        *"All packages"*)      list=$(yay -Qq) ;;
-        *"Official repos only"*) list=$(pacman -Qqn | grep -vFwf <(pacman -Sl chaotic-aur 2>/dev/null | awk '{print $2}')) ;;
-        *"Chaotic-AUR only"*)  list=$(pacman -Sl chaotic-aur 2>/dev/null | grep '\[installed\]' | awk '{print $2}') ;;
-        *"AUR only"*)          list=$(pacman -Qm | awk '{print $1}') ;;
-    esac
-
-    [[ -z "$list" ]] && return 1
-
-    echo "$list" | fzf --exact --header "ENTER: Info | CTRL-C: Quit" --preview-window=right:65% \
-        --preview 'yay -Qi {1} | awk "/^(Required By|Depends On)/ { print \"\033[1;35m\" \$0 \"\033[0m\" } !/^(Required By|Depends On)/ { print }"' \
-        --bind 'enter:execute(yay -Qi {1} | less)'
+    [[ -z "$selection" ]] && return 0
+    local pkg="${selection#*/}"
+    yay -Qi "$pkg"
 }
 
 
