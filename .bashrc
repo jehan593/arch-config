@@ -20,6 +20,24 @@ fzf_history() {
 }
 bind -x '"\C-h": fzf_history'
 
+fzf_find() {
+    local copy_cmd
+    if [[ -n "$WAYLAND_DISPLAY" ]] && command -v wl-copy &>/dev/null; then
+        copy_cmd="wl-copy"
+    elif command -v xclip &>/dev/null; then
+        copy_cmd="xclip -selection clipboard"
+    fi
+    local file=$(find / 2>/dev/null | fzf --exact \
+        --prompt="󰍉 Search: " \
+        --height=40% \
+        --layout=reverse)
+    if [[ -n "$file" && -n "$copy_cmd" ]]; then
+        echo -n "\"$file\"" | $copy_cmd
+        echo -e "\n${NORD_CYAN}󰅍  Copied:${RST} ${NORD_SNOW_1}\"$file\"${RST}\n"
+    fi
+}
+bind -x '"\C-f": fzf_find'
+
 # ------------------------------------------------------------------------------
 # 2. DEFINITIONS (Nord Theme Palette)
 # ------------------------------------------------------------------------------
@@ -193,12 +211,15 @@ inst() {
     else
         local list=$(yay -Sl 2>/dev/null | awk '{print $1"/"$2}')
         [[ -z "$list" ]] && return 1
-        echo "$list" | fzf --exact --multi --preview-window=right:60%,hidden --header "󰏖 CTRL-P: Preview | ENTER: Install" \
-            --bind 'ctrl-p:preview(
+        echo "$list" | fzf --exact --multi \
+            --preview-window=right:60%:hidden \
+            --header "󰏖 CTRL-P: Toggle Preview | ENTER: Install" \
+            --bind 'ctrl-p:toggle-preview' \
+            --preview '
                 item={}; repo=${item%%/*}; pkg=${item#*/}
                 if [ "$repo" = "aur" ]; then yay -Siai "$pkg" 2>/dev/null; else yay -Sii "$pkg"; fi | \
                 awk "/^(Votes|Popularity)/ { stats = stats \"\033[1;33m\" \$0 \"\033[0m\n\" } !/^(Votes|Popularity)/ { body = body \$0 \"\n\" } END { printf \"%s%s\", stats, body }"
-            )' | xargs -ro yay -S
+            ' | xargs -ro yay -S
     fi
 }
 
@@ -354,35 +375,7 @@ upp() {
 # ------------------------------------------------------------------------------
 # 7. PRODUCTIVITY TOOLS
 # ------------------------------------------------------------------------------
-ff() {
-    local copy_cmd
-    if command -v wl-copy &>/dev/null; then
-        copy_cmd="wl-copy"
-    elif command -v xclip &>/dev/null; then
-        copy_cmd="xclip -selection clipboard"
-    fi
-    local search_path="${1:-$HOME}"
-    if [[ -n $(find /var/lib/plocate/plocate.db -mmin +60 2>/dev/null) ]]; then
-        echo -e "${NORD_D_BLUE}󰒓  Plocate: Updating database...${RST}"
-        sudo updatedb &>/dev/null
-    fi
-    clear
-    local selection=$(plocate "$search_path" | fzf --exact --prompt="󰍉 Search: " --height=40% --layout=reverse --header="󰝰 ENTER: Open | ALT-C: Copy Path" --expect="alt-c")
-    local key=$(echo "$selection" | head -n 1)
-    local file=$(echo "$selection" | sed -n '2p')
-    if [[ -n "$file" ]]; then
-        if [[ "$key" == "alt-c" ]]; then
-            if [[ -n "$copy_cmd" ]]; then
-                echo -n "$file" | $copy_cmd
-                echo -e "\n${NORD_CYAN}󰅍  Copied:${RST} ${NORD_SNOW_1}$file${RST}\n"
-            else
-                echo -e "\n${NORD_RED}󰅙  No clipboard tool found.${RST}\n"
-            fi
-        else
-            [[ -d "$file" ]] && (echo -e "${NORD_GREEN}󰉺  Entering Directory...${RST}" && cd --silent "$file") || (echo -e "${NORD_CYAN}󰝰  Opening File...${RST}" && xdg-open "$file" >/dev/null 2>&1)
-        fi
-    fi
-}
+
 
 open() { echo -e "${NORD_CYAN}󰝰  Opening...${RST}"; xdg-open "${1:-.}" >/dev/null 2>&1; }
 cd() { if [[ "$1" == "--silent" ]]; then builtin cd "$2"; else builtin cd "$@" && ls --color=auto; fi; }
@@ -408,8 +401,8 @@ info() {
     printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" "󰏖 Packages" "upp, upall, cup, inst, uninst, lpa, cleanup"
     [[ -f "$IDEAPAD_CONSERVATION" ]] && printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" "󱊟 Hardware" "batt-on, batt-off"
     printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" "󰛳 Network"  "cdns-(on/off), warp, wg-socks, termux"
-    printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" " Utils"    "rr, ff, upf, upc, pirith, open"
-    printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" " Keybinds" "CTRL+H: history search"
+    printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" " Utils"    "rr, upf, upc, pirith, open"
+    printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" " Keybinds" "CTRL+H: history | CTRL+F: find & copy path"
     _print_footer
 }
 
