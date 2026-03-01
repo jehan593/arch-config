@@ -155,13 +155,19 @@ step "Backing up wireproxy configs"
 
 BACKUP_DIR="$HOME/Desktop/wireproxy-backup-$(date +%Y%m%d_%H%M%S)"
 
-if [[ -d "/etc/wireproxy" ]] && [[ -n "$(ls /etc/wireproxy/*.conf 2>/dev/null)" ]]; then
-    mkdir -p "$BACKUP_DIR"
-    sudo cp /etc/wireproxy/*.conf "$BACKUP_DIR/"
-    sudo chown "$USER:$USER" "$BACKUP_DIR/"*.conf
-    ok "Configs backed up to $BACKUP_DIR"
+if [[ -d "/etc/wireproxy" ]]; then
+    CONFS=$(sudo find /etc/wireproxy -maxdepth 1 -name "*.conf" 2>/dev/null)
+    if [[ -n "$CONFS" ]]; then
+        mkdir -p "$BACKUP_DIR"
+        sudo cp /etc/wireproxy/*.conf "$BACKUP_DIR/"
+        sudo chmod 644 "$BACKUP_DIR/"*.conf
+        sudo chown "$USER:$USER" "$BACKUP_DIR/"*.conf
+        ok "Configs backed up to $BACKUP_DIR"
+    else
+        info "No .conf files in /etc/wireproxy, skipping."
+    fi
 else
-    info "No wireproxy configs found, skipping backup."
+    info "No wireproxy directory found, skipping."
 fi
 
 # ==============================================================================
