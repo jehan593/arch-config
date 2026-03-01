@@ -205,6 +205,19 @@ else
 fi
 
 # ==============================================================================
+# REMOVE BRAVE POLICIES
+# ==============================================================================
+step "Removing Brave policies"
+
+BRAVE_POLICY_FILE="/etc/brave/policies/managed/arch-config.json"
+if [[ -f "$BRAVE_POLICY_FILE" ]]; then
+    sudo rm -f "$BRAVE_POLICY_FILE"
+    ok "Brave policies removed."
+else
+    info "Brave policies not found, skipping."
+fi
+
+# ==============================================================================
 # 8. OPTIONALLY REMOVE PACKAGES
 # ==============================================================================
 step "Optional: Package Removal"

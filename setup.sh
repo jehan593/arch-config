@@ -206,6 +206,22 @@ else
 fi
 
 # ==============================================================================
+# 7. BRAVE POLICIES
+# ==============================================================================
+step "Configuring Brave policies"
+
+BRAVE_POLICY_DIR="/etc/brave/policies/managed"
+BRAVE_POLICY_SRC="$DOTDIR/.config/brave/policies.json"
+
+if [[ -f "$BRAVE_POLICY_SRC" ]]; then
+    sudo mkdir -p "$BRAVE_POLICY_DIR"
+    sudo cp "$BRAVE_POLICY_SRC" "$BRAVE_POLICY_DIR/arch-config.json"
+    ok "Brave policies applied."
+else
+    info "policies.json not found in repo, skipping."
+fi
+
+# ==============================================================================
 # DONE
 # ==============================================================================
 _print_footer
