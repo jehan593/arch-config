@@ -162,6 +162,14 @@ mkdir -p "$HOME/.config/bat"
 echo '--theme="Nord"' > "$HOME/.config/bat/config"
 ok "bat configured with Nord theme."
 
+# Wallpapers
+if [[ -d "$DOTDIR/wallpapers" ]]; then
+    ln -sf "$DOTDIR/wallpapers" "$HOME/Pictures/arch-config-wallpapers"
+    ok "Linked wallpapers -> ~/Pictures/arch-config-wallpapers"
+else
+    info "No wallpapers directory found in repo, skipping."
+fi
+
 # ==============================================================================
 # 4. PASSWORDLESS UPDATEDB
 # ==============================================================================

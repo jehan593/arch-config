@@ -85,6 +85,14 @@ else
     info "No .config directory found in repo, skipping."
 fi
 
+# Wallpapers
+if [[ -L "$HOME/Pictures/arch-config-wallpapers" ]]; then
+    rm "$HOME/Pictures/arch-config-wallpapers"
+    ok "Removed wallpapers symlink."
+else
+    info "Wallpapers symlink not found, skipping."
+fi
+
 # ==============================================================================
 # 2. REMOVE BAT CONFIG
 # ==============================================================================
