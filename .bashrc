@@ -295,18 +295,19 @@ upf() {
     local URL="https://raw.githubusercontent.com/yokoffing/Betterfox/main/user.js"
     local FF_DIR="$HOME/.config/mozilla/firefox"
     local TEMP_FILE="/tmp/betterfox_user.js"
+    local OVERRIDES="$HOME/arch-config/.config/firefox/overrides.js"
     _print_header "${NORD_ORANGE}󰈹${RST}" "Firefox Tweaks"
     if ! curl -fsSL "$URL" -o "$TEMP_FILE" &>/dev/null; then
         _print_row "󰅙" "Error" "Download Failed"
         _print_footer; return 1
     fi
     _print_row "󰄬" "Download" "Betterfox fetched"
-    {
-        echo 'user_pref("browser.search.suggest.enabled", true);'
-        echo 'user_pref("browser.contentblocking.category", "");'
-        echo 'user_pref("privacy.globalprivacycontrol.enabled", false);'
-        echo 'user_pref("gfx.webrender.software",true);'
-    } >> "$TEMP_FILE"
+    if [[ -f "$OVERRIDES" ]]; then
+        cat "$OVERRIDES" >> "$TEMP_FILE"
+        _print_row "󰄬" "Overrides" "Applied from overrides.js"
+    else
+        _print_row "󰀦" "Overrides" "No overrides file found, skipping"
+    fi
     local found=false
     while IFS= read -r times_file; do
         local profile_path=$(dirname "$times_file")
@@ -345,12 +346,12 @@ upp() {
     case "$choice" in
         *"All packages"*)
             _print_header "${NORD_CYAN}󰑮${RST}" "Updating All Packages"
-            yay -Syu
+            yay -Syu --noconfirm
             ;;
         *"Official repos only"*)
             _print_header "${NORD_BLUE}󰊠${RST}" "Updating Official Repos"
             local chaotic=$(pacman -Sl chaotic-aur 2>/dev/null | awk '{print $2}' | paste -sd,)
-            sudo pacman -Syu $( [[ -n "$chaotic" ]] && echo "--ignore $chaotic" )
+            sudo pacman -Syu $( [[ -n "$chaotic" ]] && echo "--ignore $chaotic" ) --noconfirm
             ;;
         *"Chaotic-AUR only"*)
             _print_header "${NORD_ORANGE}󱓞${RST}" "Updating Chaotic-AUR"
@@ -361,12 +362,12 @@ upp() {
                 _print_row "󰚰" "Updates" "Found $(echo "$updates" | wc -l) package(s)"
                 echo "$updates" | awk '{printf "│  %s\n", $0}'
                 echo ""
-                sudo pacman -S $(echo "$updates" | awk '{print $1}')
+                sudo pacman -S $(echo "$updates" | awk '{print $1}') --noconfirm
             fi
             ;;
         *"AUR only"*)
             _print_header "${NORD_MAGENTA}󰀵${RST}" "Updating AUR Packages"
-            yay -Sua
+            yay -Sua --noconfirm
             ;;
     esac
     _print_footer
