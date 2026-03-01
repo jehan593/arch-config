@@ -150,7 +150,7 @@ cleanup() {
     _run "Partial downloads" sudo rm -rf /var/cache/pacman/pkg/download-*
     _run "Partial files" sudo rm -f /var/cache/pacman/pkg/*.part
     _run "Yay cache" yay -Sc --noconfirm
-    _run "Yay orphans" yay -Yc
+    _run "Yay orphans" yay -Yc --noconfirm
     _run "Paccache keep 2" sudo paccache -rk2
     _run "Paccache uninstalled" sudo paccache -ruk0
     _run "Yay build cache" rm -rf ~/.cache/yay/*
