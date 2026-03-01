@@ -218,6 +218,20 @@ else
 fi
 
 # ==============================================================================
+# REMOVE CHAOTIC-AUR
+# ==============================================================================
+step "Removing Chaotic-AUR"
+
+if grep -q "\[chaotic-aur\]" /etc/pacman.conf; then
+    sudo sed -i '/\[chaotic-aur\]/,/Include.*chaotic-mirrorlist/d' /etc/pacman.conf
+    sudo pacman -Rns --noconfirm chaotic-keyring chaotic-mirrorlist 2>/dev/null
+    sudo pacman -Sy
+    ok "Chaotic-AUR removed."
+else
+    info "Chaotic-AUR not configured, skipping."
+fi
+
+# ==============================================================================
 # 8. OPTIONALLY REMOVE PACKAGES
 # ==============================================================================
 step "Optional: Package Removal"
