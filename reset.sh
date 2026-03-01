@@ -149,29 +149,7 @@ else
 fi
 
 # ==============================================================================
-# 6. BACKUP WIREPROXY CONFIGS
-# ==============================================================================
-step "Backing up wireproxy configs"
-
-BACKUP_DIR="$HOME/Desktop/wireproxy-backup-$(date +%Y%m%d_%H%M%S)"
-
-if [[ -d "/etc/wireproxy" ]]; then
-    CONFS=$(sudo find /etc/wireproxy -maxdepth 1 -name "*.conf" 2>/dev/null)
-    if [[ -n "$CONFS" ]]; then
-        mkdir -p "$BACKUP_DIR"
-        sudo cp /etc/wireproxy/*.conf "$BACKUP_DIR/"
-        sudo chmod 644 "$BACKUP_DIR/"*.conf
-        sudo chown "$USER:$USER" "$BACKUP_DIR/"*.conf
-        ok "Configs backed up to $BACKUP_DIR"
-    else
-        info "No .conf files in /etc/wireproxy, skipping."
-    fi
-else
-    info "No wireproxy directory found, skipping."
-fi
-
-# ==============================================================================
-# 7. REMOVE WG-SOCKS
+# 6. REMOVE WG-SOCKS
 # ==============================================================================
 step "Removing wg-socks"
 
@@ -185,17 +163,37 @@ fi
 shopt -s nullglob
 services=(/etc/systemd/system/*-wgsocks.service)
 if [[ ${#services[@]} -gt 0 ]]; then
-    info "Found wg-socks tunnels, removing..."
-    for service in "${services[@]}"; do
-        NAME=$(basename "$service" .service)
-        sudo systemctl stop "$NAME"
-        sudo systemctl disable "$NAME" &>/dev/null
-        sudo rm -f "$service"
-        ok "Removed tunnel: $NAME"
-    done
-    sudo rm -rf /etc/wireproxy
-    sudo systemctl daemon-reload
-    ok "All tunnels removed."
+    printf "${NORD_POLAR_4}│${RST}  ${NORD_ORANGE}[WARN]${RST}  Found ${#services[@]} wg-socks tunnel(s). Stop and remove them? [y/N]: "
+    read -r remove_services
+    if [[ "$remove_services" =~ ^[Yy]$ ]]; then
+
+        # Backup first
+        BACKUP_DIR="$HOME/Desktop/wireproxy-backup-$(date +%Y%m%d_%H%M%S)"
+        if [[ -d "/etc/wireproxy" ]]; then
+            CONFS=$(sudo find /etc/wireproxy -maxdepth 1 -name "*.conf" 2>/dev/null)
+            if [[ -n "$CONFS" ]]; then
+                mkdir -p "$BACKUP_DIR"
+                sudo cp /etc/wireproxy/*.conf "$BACKUP_DIR/"
+                sudo chmod 644 "$BACKUP_DIR/"*.conf
+                sudo chown "$USER:$USER" "$BACKUP_DIR/"*.conf
+                ok "Configs backed up to $BACKUP_DIR"
+            fi
+        fi
+
+        # Remove services
+        for service in "${services[@]}"; do
+            NAME=$(basename "$service" .service)
+            sudo systemctl stop "$NAME"
+            sudo systemctl disable "$NAME" &>/dev/null
+            sudo rm -f "$service"
+            ok "Removed tunnel: $NAME"
+        done
+        sudo rm -rf /etc/wireproxy
+        sudo systemctl daemon-reload
+        ok "All tunnels removed."
+    else
+        info "Skipping tunnel removal."
+    fi
 else
     info "No wg-socks tunnels found, skipping."
 fi
