@@ -20,24 +20,6 @@ fzf_history() {
 }
 bind -x '"\C-h": fzf_history'
 
-fzf_find() {
-    local copy_cmd
-    if [[ -n "$WAYLAND_DISPLAY" ]] && command -v wl-copy &>/dev/null; then
-        copy_cmd="wl-copy"
-    elif command -v xclip &>/dev/null; then
-        copy_cmd="xclip -selection clipboard"
-    fi
-    local file=$(find / 2>/dev/null | fzf --exact \
-        --prompt="󰍉 Search: " \
-        --height=40% \
-        --layout=reverse)
-    if [[ -n "$file" && -n "$copy_cmd" ]]; then
-        echo -n "\"$file\"" | $copy_cmd
-        echo -e "\n${NORD_CYAN}󰅍  Copied:${RST} ${NORD_SNOW_1}\"$file\"${RST}\n"
-    fi
-}
-bind -x '"\C-f": fzf_find'
-
 # ------------------------------------------------------------------------------
 # 2. DEFINITIONS (Nord Theme Palette)
 # ------------------------------------------------------------------------------
@@ -382,6 +364,25 @@ open() { echo -e "${NORD_CYAN}󰝰  Opening...${RST}"; xdg-open "${1:-.}" >/dev/
 cd() { if [[ "$1" == "--silent" ]]; then builtin cd "$2"; else builtin cd "$@" && ls --color=auto; fi; }
 z() { if command -v __zoxide_z &>/dev/null; then __zoxide_z "$@" && ls --color=auto; else builtin cd "$@"; fi; }
 
+ff() {
+    local search_path="${1:-/}"
+    if [[ ! -d "$search_path" ]]; then
+        echo -e "${NORD_RED}󱞣  Path not found: $search_path${RST}"
+        return 1
+    fi
+
+    local selection=$(find "$search_path" 2>/dev/null | fzf --exact \
+        --layout=reverse \
+        --height=40% \
+        --header="󰍉 Searching: $search_path")
+
+    [[ -z "$selection" ]] && return 0
+
+    local quoted="\"$selection\""
+    echo -n "$quoted" | xclip -selection clipboard
+    echo -e "${NORD_CYAN}󰅍  Copied:${RST} ${NORD_SNOW_1}$quoted${RST}"
+}
+
 # ------------------------------------------------------------------------------
 # 8. MISCELLANEOUS & HELP
 # ------------------------------------------------------------------------------
@@ -402,8 +403,8 @@ info() {
     printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" "󰏖 Packages" "upp, upall, cup, inst, uninst, lpa, cleanup"
     [[ -f "$IDEAPAD_CONSERVATION" ]] && printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" "󱊟 Hardware" "batt-on, batt-off"
     printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" "󰛳 Network"  "cdns-(on/off), warp, wg-socks, termux"
-    printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" " Utils"    "rr, upf, upc, pirith, open"
-    printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" " Keybinds" "CTRL+H: history | CTRL+F: find & copy path"
+    printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" " Utils"    "rr, upf, upc, pirith, open, ff"
+    printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" " Keybinds" "CTRL+H: history"
     _print_footer
 }
 
