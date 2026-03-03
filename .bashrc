@@ -187,15 +187,26 @@ cup() {
 }
 
 inst() {
+    if [[ "$1" == "-refresh" ]]; then
+        echo -e "${NORD_D_BLUE}󰒓  Refreshing package cache...${RST}"
+        yay -Sl 2>/dev/null | awk '{print $1"/"$2}' > "$HOME/.cache/yay-pkg-list.cache"
+        echo -e "${NORD_GREEN}󰄬  Cache updated.${RST}"
+        return 0
+    fi
+
     if [[ $# -gt 0 ]]; then
         _print_header "${NORD_GREEN}󰏖${RST}" "Installing Packages"
         yay -S "$@"
     else
-        local list=$(yay -Sl 2>/dev/null | awk '{print $1"/"$2}')
-        [[ -z "$list" ]] && return 1
-        echo "$list" | fzf --exact --multi \
+        local cache="$HOME/.cache/yay-pkg-list.cache"
+        if [[ ! -f "$cache" ]] || [[ -n $(find "$cache" -mmin +60 2>/dev/null) ]]; then
+            echo -e "${NORD_D_BLUE}󰒓  Refreshing package cache...${RST}"
+            yay -Sl 2>/dev/null | awk '{print $1"/"$2}' > "$cache"
+        fi
+        [[ ! -s "$cache" ]] && return 1
+        cat "$cache" | fzf --exact --multi \
             --preview-window=right:60%:hidden \
-            --header "󰏖 CTRL-P: Toggle Preview | ENTER: Install" \
+            --header "󰏖 CTRL-P: Toggle Preview | ENTER: Install | inst -refresh: Refresh Cache" \
             --bind 'ctrl-p:toggle-preview' \
             --preview '
                 item={}; repo=${item%%/*}; pkg=${item#*/}
