@@ -191,6 +191,7 @@ inst() {
         echo -e "${NORD_D_BLUE}󰒓  Refreshing package cache...${RST}"
         yay -Sl 2>/dev/null | awk '{print $1"/"$2}' > "$HOME/.cache/yay-pkg-list.cache"
         echo -e "${NORD_GREEN}󰄬  Cache updated.${RST}"
+        inst
         return 0
     fi
 
@@ -199,7 +200,7 @@ inst() {
         yay -S "$@"
     else
         local cache="$HOME/.cache/yay-pkg-list.cache"
-        if [[ ! -f "$cache" ]] || [[ -n $(find "$cache" -mmin +60 2>/dev/null) ]]; then
+        if [[ ! -f "$cache" ]] || [[ -n $(find "$cache" -mmin +1440 2>/dev/null) ]]; then
             echo -e "${NORD_D_BLUE}󰒓  Refreshing package cache...${RST}"
             yay -Sl 2>/dev/null | awk '{print $1"/"$2}' > "$cache"
         fi
