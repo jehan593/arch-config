@@ -87,7 +87,7 @@ sys() {
     local aur_pkgs=$(pacman -Qm | wc -l)
     local chaotic_pkgs=$(pacman -Sl chaotic-aur 2>/dev/null | grep '\[installed\]' | wc -l)
     local repo_pkgs=$((total_pkgs - aur_pkgs - chaotic_pkgs))
-    local pkg_string="${repo_pkgs} (repo) + ${chaotic_pkgs} (chaos) + ${aur_pkgs} (aur)"
+    local pkg_string="${repo_pkgs} (core/extra) + ${chaotic_pkgs} (chaotic-aur) + ${aur_pkgs} (AUR)"
     local ker=$(uname -r | cut -d '-' -f1)
     local mem=$(free -h | awk '/^Mem:/ {print $3 " / " $2}')
     local uptime=$(uptime -p | sed 's/up //')
