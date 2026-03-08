@@ -85,14 +85,6 @@ else
     info "No .config directory found in repo, skipping."
 fi
 
-# Wallpapers
-if [[ -L "$HOME/Pictures/arch-config-wallpapers" ]]; then
-    rm "$HOME/Pictures/arch-config-wallpapers"
-    ok "Removed wallpapers symlink."
-else
-    info "Wallpapers symlink not found, skipping."
-fi
-
 # ==============================================================================
 # 2. REMOVE BAT CONFIG
 # ==============================================================================
@@ -241,6 +233,25 @@ if grep -q "\[chaotic-aur\]" /etc/pacman.conf; then
     ok "Chaotic-AUR removed."
 else
     info "Chaotic-AUR not configured, skipping."
+fi
+
+# ==============================================================================
+# REMOVE WALLPAPERS
+# ==============================================================================
+step "Removing wallpapers"
+
+WALLPAPERS_DIR="$HOME/Pictures/config-wallpapers"
+if [[ -d "$WALLPAPERS_DIR" ]]; then
+    printf "${NORD_POLAR_4}│${RST}  ${NORD_ORANGE}[WARN]${RST}  Remove wallpapers directory? [y/N]: "
+    read -r remove_wallpapers
+    if [[ "$remove_wallpapers" =~ ^[Yy]$ ]]; then
+        rm -rf "$WALLPAPERS_DIR"
+        ok "Wallpapers removed."
+    else
+        info "Skipping wallpapers removal."
+    fi
+else
+    info "Wallpapers directory not found, skipping."
 fi
 
 # ==============================================================================

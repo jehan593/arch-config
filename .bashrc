@@ -9,6 +9,8 @@
 
 export EDITOR='vim'
 export VISUAL='codium'
+export MANROFFOPT="-c"
+export PAGER='most'
 export TERM=xterm-256color
 
 command -v starship &>/dev/null && eval "$(starship init bash)" || PS1='[\u@\h \W]\$ '
@@ -66,6 +68,7 @@ IDEAPAD_CONSERVATION="/sys/bus/platform/drivers/ideapad_acpi/VPC2004:00/conserva
 alias ..='cd ..'
 alias ls='ls --color=auto'
 alias la='ls -a --color=auto'
+alias tree='tree -C'
 alias ll='ls -l --color=auto'
 alias lla='ls -al --color=auto'
 alias grep='grep --color=auto'
@@ -75,7 +78,7 @@ alias reload='source ~/.bashrc && echo -e "${NORD_GREEN}󰬷  Profile Reloaded!$
 rr() { echo -e "${NORD_CYAN}󰮯  Elevating Last Command...${RST}"; sudo $(fc -ln -1); }
 alias conf='vim ~/.bashrc'
 alias confc='[[ -x $(command -v codium) ]] && (echo -e "${NORD_CYAN}󰨞  Opening Configs...${RST}" && codium ~/arch-config/) || echo -e "${NORD_RED}󰅙  VSCodium not found.${RST}"'
-alias upall='_print_header "󰚰" "Full System Update" && yay -Syu --noconfirm && upf'
+alias upall='_print_header "󰚰" "Full System Update" && yay -Syu --noconfirm && upf && wp'
 alias up-mirrors='_print_header "󰈀" "Updating Mirrors" && sudo reflector --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist && sudo pacman -Syyu'
 alias age='echo -e "${NORD_BLUE}󰃭  OS Age:${RST} $(( ($(date +%s) - $(stat -c %Y /lost+found 2>/dev/null || stat -c %Y /)) / 86400 )) days"'
 
@@ -102,7 +105,7 @@ sys() {
 
     if [[ -f "$IDEAPAD_CONSERVATION" ]]; then
         local status
-        [[ $(< "$IDEAPAD_CONSERVATION") -eq 1 ]] && status="Conserving (80%)" || status="Full Charge"
+        [[ $(< "$IDEAPAD_CONSERVATION") -eq 1 ]] && status="Conservation - ON" || status="Conservation - OFF"
         _print_row "󱊟" "Battery" "$status"
     fi
     _print_row "󰒍" "Shell" "Bash ${BASH_VERSION%%(*}"
@@ -170,19 +173,19 @@ cup() {
     local all_sync=$(checkupdates 2>/dev/null)
     local chaotic_names=$(pacman -Sl chaotic-aur 2>/dev/null | awk '{print $2}')
 
-    _print_header "${NORD_BLUE}󰏖${RST}" "Official Repos"
+    _print_header "${NORD_BLUE}󰏖${RST}" "core/extra"
     local official_updates
     [[ -z "$chaotic_names" ]] && official_updates="$all_sync" || official_updates=$(echo "$all_sync" | grep -vFwf <(echo "$chaotic_names"))
-    [[ -z "$official_updates" ]] && echo -e "󰄬  No official updates" || process_updates "$official_updates" "pacman" "true"
+    [[ -z "$official_updates" ]] && echo -e "󰄬  up to date" || process_updates "$official_updates" "pacman" "true"
 
-    _print_header "${NORD_CYAN}󰏖${RST}" "Chaotic-AUR"
+    _print_header "${NORD_CYAN}󰏖${RST}" "chaotic-aur"
     local chaotic_updates
     [[ -z "$chaotic_names" ]] && chaotic_updates="" || chaotic_updates=$(echo "$all_sync" | grep -Fwf <(echo "$chaotic_names"))
-    [[ -z "$chaotic_updates" ]] && echo -e "󰄬  No Chaotic updates" || process_updates "$chaotic_updates" "pacman" "true"
+    [[ -z "$chaotic_updates" ]] && echo -e "󰄬  up to date" || process_updates "$chaotic_updates" "pacman" "true"
 
     _print_header "${NORD_MAGENTA}󰏖${RST}" "AUR"
     local aur_updates=$(yay -Qua 2>/dev/null)
-    [[ -z "$aur_updates" ]] && echo -e "󰄬  No AUR updates" || process_updates "$aur_updates" "yay" "false"
+    [[ -z "$aur_updates" ]] && echo -e "󰄬  up to date" || process_updates "$aur_updates" "yay" "false"
     echo ""
 }
 
@@ -329,8 +332,8 @@ upc() {
 }
 
 upp() {
-    local choice=$(printf "󰑮  All packages\n󰊠  Official repos only\n󱓞  Chaotic-AUR only\n󰀵  AUR only" | \
-        fzf --exact --height=6 --layout=reverse --border=rounded \
+    local choice=$(printf "  All\n  core/extra\n  chaotic-aur\n  AUR" | \
+        fzf --exact --header "Upgrade Packages :" --height=7 --layout=reverse --border=rounded \
             --color="bg:#2E3440,bg+:#3B4252,border:#88C0D0,fg:#D8DEE9,fg+:#ECEFF4,hl:#88C0D0,hl+:#88C0D0" \
             --no-info --no-sort --no-input)
 
@@ -338,20 +341,20 @@ upp() {
     echo ""
 
     case "$choice" in
-        *"All packages"*)
-            _print_header "${NORD_CYAN}󰑮${RST}" "Updating All Packages"
+        *"All"*)
+            _print_header "${NORD_CYAN}󰑮${RST}" "Upgrading Packages | All"
             yay -Syu --noconfirm
             ;;
-        *"Official repos only"*)
-            _print_header "${NORD_BLUE}󰊠${RST}" "Updating Official Repos"
+        *"core/extra"*)
+            _print_header "${NORD_BLUE}󰊠${RST}" "Upgrading Packages | core/extra "
             local chaotic=$(pacman -Sl chaotic-aur 2>/dev/null | awk '{print $2}' | paste -sd,)
             sudo pacman -Syu $( [[ -n "$chaotic" ]] && echo "--ignore $chaotic" ) --noconfirm
             ;;
-        *"Chaotic-AUR only"*)
-            _print_header "${NORD_ORANGE}󱓞${RST}" "Updating Chaotic-AUR"
+        *"chaotic-aur"*)
+            _print_header "${NORD_ORANGE}󱓞${RST}" "Upgrading Packages | chaotic-aur"
             local updates=$(yay -Qu 2>/dev/null | grep -Fwf <(pacman -Sl chaotic-aur 2>/dev/null | awk '{print $2}'))
             if [[ -z "$updates" ]]; then
-                _print_row "󰄬" "Status" "All Chaotic packages up to date"
+                _print_row "󰄬" "Status" "up to date"
             else
                 _print_row "󰚰" "Updates" "Found $(echo "$updates" | wc -l) package(s)"
                 echo "$updates" | awk '{printf "│  %s\n", $0}'
@@ -359,8 +362,8 @@ upp() {
                 sudo pacman -S $(echo "$updates" | awk '{print $1}') --noconfirm
             fi
             ;;
-        *"AUR only"*)
-            _print_header "${NORD_MAGENTA}󰀵${RST}" "Updating AUR Packages"
+        *"AUR"*)
+            _print_header "${NORD_MAGENTA}󰀵${RST}" "Upgrading Packages | AUR"
             yay -Sua --noconfirm
             ;;
     esac
@@ -373,8 +376,8 @@ upp() {
 
 
 open() { echo -e "${NORD_CYAN}󰝰  Opening...${RST}"; xdg-open "${1:-.}" >/dev/null 2>&1; }
-cd() { if [[ "$1" == "--silent" ]]; then builtin cd "$2"; else builtin cd "$@" && ls --color=auto; fi; }
-z() { if command -v __zoxide_z &>/dev/null; then __zoxide_z "$@" && ls --color=auto; else builtin cd "$@"; fi; }
+cd() { if [[ "$1" == "--silent" ]]; then builtin cd "$2"; else builtin cd "$@" && ls -a --color=auto; fi; }
+z() { if command -v __zoxide_z &>/dev/null; then __zoxide_z "$@" && ls -a --color=auto; else builtin cd "$@"; fi; }
 
 ff() {
     local search_path="${1:-/}"
@@ -393,6 +396,39 @@ ff() {
     local quoted="\"$selection\""
     echo -n "$quoted" | xclip -selection clipboard
     echo -e "${NORD_CYAN}󰅍  Copied:${RST} ${NORD_SNOW_1}$quoted${RST}"
+}
+
+wp() {
+    local WALLPAPERS_DIR="$HOME/Pictures/config-wallpapers"
+    if [[ ! -d "$WALLPAPERS_DIR" ]]; then
+        _print_header "${NORD_RED}󰋊${RST}" "Wallpapers"
+        _print_row "󰅙" "Error" "Wallpapers directory not found"
+        _print_footer; return 1
+    fi
+    _print_header "${NORD_CYAN}󰋊${RST}" "Wallpapers"
+
+    local changes=$(git -C "$WALLPAPERS_DIR" status --porcelain 2>/dev/null)
+    if [[ -n "$changes" ]]; then
+        _print_row "󰊢" "Local" "Uncommitted changes found"
+        git -C "$WALLPAPERS_DIR" add -A &>/dev/null
+        git -C "$WALLPAPERS_DIR" commit -m "sync: local wallpaper changes" &>/dev/null \
+            && _print_row "󰄬" "Commit" "Changes committed" \
+            || _print_row "󰅙" "Commit" "Failed to commit"
+    fi
+
+    if git -C "$WALLPAPERS_DIR" pull --rebase --autostash &>/dev/null; then
+        _print_row "󰄬" "Pull" "Up to date"
+    else
+        _print_row "󰅙" "Pull" "Pull failed"
+    fi
+
+    if git -C "$WALLPAPERS_DIR" push &>/dev/null; then
+        _print_row "󰄬" "Push" "Synced to GitHub"
+    else
+        _print_row "󰅙" "Push" "Nothing to push or push failed"
+    fi
+
+    _print_footer
 }
 
 # ------------------------------------------------------------------------------
@@ -415,7 +451,7 @@ info() {
     printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" "󰏖 Packages" "upp, upall, cup, inst, uninst, lpa, cleanup"
     [[ -f "$IDEAPAD_CONSERVATION" ]] && printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" "󱊟 Hardware" "batt-on, batt-off"
     printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" "󰛳 Network"  "cdns-(on/off), warp, wg-socks, termux"
-    printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" " Utils"    "rr, upf, upc, pirith, open, ff"
+    printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" " Utils"    "rr, upf, upc, pirith, open, ff, wp"
     printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" " Keybinds" "CTRL+H: history"
     _print_footer
 }

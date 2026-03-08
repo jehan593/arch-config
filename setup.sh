@@ -110,6 +110,7 @@ DEPENDENCIES=(
     "xclip"
     "reflector"
     "pacman-contrib"
+    "git"
 )
 
 info "Updating package database..."
@@ -161,14 +162,6 @@ info "Configuring bat theme..."
 mkdir -p "$HOME/.config/bat"
 echo '--theme="Nord"' > "$HOME/.config/bat/config"
 ok "bat configured with Nord theme."
-
-# Wallpapers
-if [[ -d "$DOTDIR/wallpapers" ]]; then
-    ln -sf "$DOTDIR/wallpapers" "$HOME/Pictures/arch-config-wallpapers"
-    ok "Linked wallpapers -> ~/Pictures/arch-config-wallpapers"
-else
-    info "No wallpapers directory found in repo, skipping."
-fi
 
 # ==============================================================================
 # 4. PASSWORDLESS UPDATEDB
@@ -247,6 +240,25 @@ else
     info "policies.json not found in repo, skipping."
 fi
 
+# ==============================================================================
+# 8. WALLPAPERS
+# ==============================================================================
+step "Setting up wallpapers"
+
+WALLPAPERS_DIR="$HOME/Pictures/config-wallpapers"
+WALLPAPERS_REPO="https://github.com/jehan593/my-wallpapers"
+
+if [[ ! -d "$WALLPAPERS_DIR" ]]; then
+    info "Cloning wallpapers repo..."
+    git clone "$WALLPAPERS_REPO" "$WALLPAPERS_DIR" \
+        && ok "Wallpapers cloned to $WALLPAPERS_DIR" \
+        || err "Failed to clone wallpapers repo."
+else
+    ok "Wallpapers already cloned."
+fi
+
+git -C "$WALLPAPERS_DIR" config --local credential.helper store
+ok "Git credential store configured for wallpapers repo."
 # ==============================================================================
 # DONE
 # ==============================================================================
