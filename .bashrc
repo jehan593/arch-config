@@ -220,32 +220,44 @@ inst() {
     fi
 }
 
+_pkg_list() {
+    local explicit=$(pacman -Qe | awk '{print $1}')
+    {
+        pacman -Qqn | grep -vFwf <(pacman -Sl chaotic-aur 2>/dev/null | awk '{print $2}') | awk '{print "core/" $1}'
+        pacman -Sl chaotic-aur 2>/dev/null | grep '\[installed\]' | awk '{print "chaotic-aur/" $2}'
+        pacman -Qm | awk '{print "aur/" $1}'
+    } | while IFS= read -r line; do
+        local pkg="${line#*/}"
+        if echo "$explicit" | grep -q "^${pkg}$"; then
+            echo "*  $line"
+        else
+            echo "   $line"
+        fi
+    done
+}
+
+lpa() {
+    local selection=$(_pkg_list | fzf --exact \
+        --header "* explicit | ENTER: Info | CTRL-C: Quit" \
+        --preview-window=right:60% \
+        --preview 'echo {} | awk -F/ "{print \$2}" | xargs yay -Qi 2>/dev/null | awk "/^(Required By|Depends On)/ { print \"\033[1;35m\" \$0 \"\033[0m\" } !/^(Required By|Depends On)/ { print }"')
+
+    [[ -z "$selection" ]] && return 0
+    local pkg=$(echo "$selection" | awk '{print $NF}' | awk -F/ '{print $2}')
+    yay -Qi "$pkg"
+}
+
 uninst() {
     if [[ $# -gt 0 ]]; then
         _print_header "${NORD_RED}󰆑${RST}" "Uninstalling Packages"
         sudo pacman -Rns "$@"
     else
-        {
-            pacman -Qqn | grep -vFwf <(pacman -Sl chaotic-aur 2>/dev/null | awk '{print $2}') | awk '{print "core/" $1}'
-            pacman -Sl chaotic-aur 2>/dev/null | grep '\[installed\]' | awk '{print "chaotic-aur/" $2}'
-            pacman -Qm | awk '{print "aur/" $1}'
-        } | fzf --exact --multi --preview-window=right:60% --header "󰆑 Select apps to UNINSTALL" \
+        _pkg_list | fzf --exact --multi \
+            --preview-window=right:60% \
+            --header "󰆑 * explicit | Select to UNINSTALL" \
             --preview 'echo {} | awk -F/ "{print \$2}" | xargs yay -Qi 2>/dev/null | awk "/^(Install Date|Installed Size)/ { stats = stats \"\033[1;31m\" \$0 \"\033[0m\n\" } !/^(Install Date|Installed Size)/ { body = body \$0 \"\n\" } END { printf \"%s%s\", stats, body }"' \
-            | awk -F/ '{print $2}' | xargs -ro sudo pacman -Rns
+            | awk '{print $NF}' | awk -F/ '{print $2}' | xargs -ro sudo pacman -Rns
     fi
-}
-
-lpa() {
-    local selection=$({
-        pacman -Qqn | grep -vFwf <(pacman -Sl chaotic-aur 2>/dev/null | awk '{print $2}') | awk '{print "core/" $1}'
-        pacman -Sl chaotic-aur 2>/dev/null | grep '\[installed\]' | awk '{print "chaotic-aur/" $2}'
-        pacman -Qm | awk '{print "aur/" $1}'
-    } | fzf --exact --header "ENTER: Info | CTRL-C: Quit" --preview-window=right:60% \
-        --preview 'echo {} | awk -F/ "{print \$2}" | xargs yay -Qi 2>/dev/null | awk "/^(Required By|Depends On)/ { print \"\033[1;35m\" \$0 \"\033[0m\" } !/^(Required By|Depends On)/ { print }"')
-
-    [[ -z "$selection" ]] && return 0
-    local pkg="${selection#*/}"
-    yay -Qi "$pkg"
 }
 
 
@@ -352,6 +364,7 @@ upp() {
             ;;
         *"chaotic-aur"*)
             _print_header "${NORD_ORANGE}󱓞${RST}" "Upgrading Packages | chaotic-aur"
+            sudo pacman -Sy &>/dev/null
             local updates=$(yay -Qu 2>/dev/null | grep -Fwf <(pacman -Sl chaotic-aur 2>/dev/null | awk '{print $2}'))
             if [[ -z "$updates" ]]; then
                 _print_row "󰄬" "Status" "up to date"

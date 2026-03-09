@@ -111,6 +111,7 @@ DEPENDENCIES=(
     "reflector"
     "pacman-contrib"
     "git"
+    "expac"
 )
 
 info "Updating package database..."
