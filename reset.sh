@@ -275,6 +275,27 @@ else
 fi
 
 # ==============================================================================
+# REMOVE THEMES
+# ==============================================================================
+step "Removing themes"
+
+printf "${NORD_POLAR_4}│${RST}  ${NORD_SNOW_1}Remove theme packages? [y/N]: ${RST}"
+read -r remove_themes
+if [[ "$remove_themes" =~ ^[Yy]$ ]]; then
+    if yay -Rns --noconfirm \
+        xcursor-simp1e-nord-light \
+        nordic-darker-standard-buttons-theme 2>/dev/null; then
+        ok "Themes removed."
+    else
+        err "Could not remove themes."
+    fi
+    info "papirus-icon-theme kept (required by cinnamon)."
+else
+    info "Skipping theme removal."
+fi
+
+
+# ==============================================================================
 # DONE
 # ==============================================================================
 _print_footer

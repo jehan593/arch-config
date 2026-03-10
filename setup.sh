@@ -260,6 +260,40 @@ fi
 
 git -C "$WALLPAPERS_DIR" config --local credential.helper store
 ok "Git credential store configured for wallpapers repo."
+
+# ==============================================================================
+# 9. THEMES
+# ==============================================================================
+step "Installing themes"
+
+# Theme packages
+yay -S --noconfirm --needed \
+    xcursor-simp1e-nord-light \
+    nordic-darker-standard-buttons-theme \
+    papirus-icon-theme \
+    && ok "Themes installed." \
+    || err "Failed to install themes."
+
+# Papirus Nord folder colors
+info "Applying Papirus Nord folder colors (Frost Blue 4)..."
+PAPIRUS_NORD_DIR="/tmp/papirus-nord-install"
+rm -rf "$PAPIRUS_NORD_DIR"
+if git clone https://github.com/Adapta-Projects/Papirus-Nord "$PAPIRUS_NORD_DIR" &>/dev/null; then
+    if [[ -f "$PAPIRUS_NORD_DIR/install" ]]; then
+        sudo bash "$PAPIRUS_NORD_DIR/install" \
+            && ok "Papirus Nord icons installed." \
+            || err "Failed to install Papirus Nord icons."
+        papirus-folders -C frostblue4 \
+            && ok "Frost Blue 4 folder color applied." \
+            || err "Failed to apply folder color."
+    else
+        err "install script not found in Papirus-Nord repo."
+    fi
+    rm -rf "$PAPIRUS_NORD_DIR"
+else
+    err "Failed to clone Papirus-Nord repo."
+fi
+
 # ==============================================================================
 # DONE
 # ==============================================================================
