@@ -216,7 +216,7 @@ inst() {
                 item={}; repo=${item%%/*}; pkg=${item#*/}
                 if [ "$repo" = "aur" ]; then yay -Siai "$pkg" 2>/dev/null; else yay -Sii "$pkg"; fi | \
                 awk "/^(Votes|Popularity)/ { stats = stats \"\033[1;33m\" \$0 \"\033[0m\n\" } !/^(Votes|Popularity)/ { body = body \$0 \"\n\" } END { printf \"%s%s\", stats, body }"
-            ' | xargs -ro yay -S
+            ' | xargs -ro yay -S --noconfirm
     fi
 }
 
