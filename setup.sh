@@ -261,7 +261,7 @@ fi
 # ==============================================================================
 step "Setting up wallpapers"
 
-WALLPAPERS_DIR="$HOME/Pictures/arch-config-wallpapers"
+WALLPAPERS_DIR="$HOME/Pictures/config-wallpapers"
 WALLPAPERS_REPO="https://github.com/jehan593/my-wallpapers"
 
 if [[ ! -d "$WALLPAPERS_DIR" ]]; then
