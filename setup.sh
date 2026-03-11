@@ -62,7 +62,7 @@ step "Checking AUR helper (yay)"
 
 if ! command -v yay &>/dev/null; then
     info "Installing yay..."
-    sudo pacman -S --needed base-devel git
+    sudo pacman -S --needed --noconfirm base-devel git
     rm -rf /tmp/yay-install
     git clone https://aur.archlinux.org/yay.git /tmp/yay-install
     (cd /tmp/yay-install && makepkg -si --noconfirm)
@@ -91,13 +91,20 @@ else
 fi
 
 # ==============================================================================
-# 2. CORE DEPENDENCIES
+# 3. CORE DEPENDENCIES
 # ==============================================================================
 step "Installing dependencies"
+
+# Replace vim with gvim for clipboard support
+if pacman -Qq vim &>/dev/null && ! pacman -Qq gvim &>/dev/null; then
+    info "Replacing vim with gvim for clipboard support..."
+    sudo pacman -Rdd --noconfirm vim
+fi
 
 DEPENDENCIES=(
     "wireproxy"
     "wgcf"
+    "wireguard-tools"
     "bat"
     "plocate"
     "curl"
@@ -115,14 +122,15 @@ DEPENDENCIES=(
 )
 
 info "Updating package database..."
-yay -S --needed --noconfirm "${DEPENDENCIES[@]}"
+yay -S --needed --noconfirm "${DEPENDENCIES[@]}" \
+    && ok "Dependencies installed." \
+    || err "Some dependencies failed to install."
 
 info "Initializing plocate database..."
 sudo updatedb
-ok "Dependencies installed."
 
 # ==============================================================================
-# 3. SYMLINKS
+# 4. SYMLINKS
 # ==============================================================================
 step "Creating symlinks"
 
@@ -135,14 +143,21 @@ ok "Linked .bashrc -> ~/.bashrc"
 ln -sf "$DOTDIR/.vimrc" "$HOME/.vimrc"
 ok "Linked .vimrc -> ~/.vimrc"
 
-# .config symlinks - link files only, not folders
+# Direct .config files (e.g. starship.toml)
+for file in "$DOTDIR/.config/"*; do
+    [[ -f "$file" ]] || continue
+    ln -sf "$file" "$HOME/.config/$(basename "$file")"
+    ok "Linked .config/$(basename "$file")"
+done
+
+# .config subdirectory files - link files only, not folders
 for item in "$DOTDIR/.config/"*/; do
     dir=$(basename "$item")
     mkdir -p "$HOME/.config/$dir"
     for file in "$item"*; do
         [[ -f "$file" ]] || continue
         ln -sf "$file" "$HOME/.config/$dir/$(basename "$file")"
-        ok "Linked $dir/$(basename "$file") -> ~/.config/$dir/$(basename "$file")"
+        ok "Linked .config/$dir/$(basename "$file")"
     done
 done
 
@@ -165,7 +180,7 @@ echo '--theme="Nord"' > "$HOME/.config/bat/config"
 ok "bat configured with Nord theme."
 
 # ==============================================================================
-# 4. PASSWORDLESS UPDATEDB
+# 5. PASSWORDLESS UPDATEDB
 # ==============================================================================
 step "Configuring passwordless updatedb"
 
@@ -187,7 +202,7 @@ else
 fi
 
 # ==============================================================================
-# 4.5 PACMAN CANDY
+# 6. PACMAN CANDY
 # ==============================================================================
 step "Configuring pacman"
 
@@ -200,7 +215,7 @@ else
 fi
 
 # ==============================================================================
-# 5. WG-SOCKS SETUP
+# 7. WG-SOCKS SETUP
 # ==============================================================================
 step "Setting up wg-socks manager"
 
@@ -213,7 +228,7 @@ else
 fi
 
 # ==============================================================================
-# 6. WARP SETUP
+# 8. WARP SETUP
 # ==============================================================================
 step "Setting up warp manager"
 
@@ -226,7 +241,7 @@ else
 fi
 
 # ==============================================================================
-# 7. BRAVE POLICIES
+# 9. BRAVE POLICIES
 # ==============================================================================
 step "Configuring Brave policies"
 
@@ -242,11 +257,11 @@ else
 fi
 
 # ==============================================================================
-# 8. WALLPAPERS
+# 10. WALLPAPERS
 # ==============================================================================
 step "Setting up wallpapers"
 
-WALLPAPERS_DIR="$HOME/Pictures/config-wallpapers"
+WALLPAPERS_DIR="$HOME/Pictures/arch-config-wallpapers"
 WALLPAPERS_REPO="https://github.com/jehan593/my-wallpapers"
 
 if [[ ! -d "$WALLPAPERS_DIR" ]]; then
@@ -254,25 +269,23 @@ if [[ ! -d "$WALLPAPERS_DIR" ]]; then
     git clone "$WALLPAPERS_REPO" "$WALLPAPERS_DIR" \
         && ok "Wallpapers cloned to $WALLPAPERS_DIR" \
         || err "Failed to clone wallpapers repo."
+    git -C "$WALLPAPERS_DIR" config --local credential.helper store
+    ok "Git credential store configured for wallpapers repo."
 else
     ok "Wallpapers already cloned."
 fi
 
-git -C "$WALLPAPERS_DIR" config --local credential.helper store
-ok "Git credential store configured for wallpapers repo."
-
 # ==============================================================================
-# 9. THEMES
+# 11. THEMES
 # ==============================================================================
 step "Installing themes"
 
-# Theme packages
 yay -S --noconfirm --needed \
     xcursor-simp1e-nord-light \
     nordic-darker-standard-buttons-theme \
     papirus-icon-theme \
-    && ok "Themes installed." \
-    || err "Failed to install themes."
+    && ok "Theme packages installed." \
+    || err "Failed to install some theme packages."
 
 # Papirus Nord folder colors
 info "Applying Papirus Nord folder colors (Frost Blue 4)..."
@@ -283,7 +296,7 @@ if git clone https://github.com/Adapta-Projects/Papirus-Nord "$PAPIRUS_NORD_DIR"
         sudo bash "$PAPIRUS_NORD_DIR/install" \
             && ok "Papirus Nord icons installed." \
             || err "Failed to install Papirus Nord icons."
-        papirus-folders -C frostblue4 \
+        papirus-folders -C frostblue4 --theme Papirus-Dark \
             && ok "Frost Blue 4 folder color applied." \
             || err "Failed to apply folder color."
     else
