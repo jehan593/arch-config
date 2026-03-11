@@ -286,19 +286,28 @@ yay -S --noconfirm --needed \
     papirus-icon-theme \
     && ok "Theme packages installed." \
     || err "Failed to install some theme packages."
-
+    
 # Papirus Nord folder colors
 info "Applying Papirus Nord folder colors (Frost Blue 4)..."
 PAPIRUS_NORD_DIR="/tmp/papirus-nord-install"
 rm -rf "$PAPIRUS_NORD_DIR"
 if git clone https://github.com/Adapta-Projects/Papirus-Nord "$PAPIRUS_NORD_DIR" &>/dev/null; then
     if [[ -f "$PAPIRUS_NORD_DIR/install" ]]; then
-        sudo bash "$PAPIRUS_NORD_DIR/install" \
+        cd "$PAPIRUS_NORD_DIR" || exit
+        sudo bash install \
             && ok "Papirus Nord icons installed." \
             || err "Failed to install Papirus Nord icons."
-        papirus-folders -C frostblue4 --theme Papirus-Dark \
-            && ok "Frost Blue 4 folder color applied." \
-            || err "Failed to apply folder color."
+        cd "$OLDPWD" || exit
+        # papirus-folders installs to /usr/bin
+        if command -v papirus-folders &>/dev/null; then
+            papirus-folders -C frostblue4 --theme Papirus-Dark \
+                && ok "Frost Blue 4 folder color applied." \
+                || err "Failed to apply folder color."
+        else
+            sudo /usr/bin/papirus-folders -C frostblue4 --theme Papirus-Dark \
+                && ok "Frost Blue 4 folder color applied." \
+                || err "papirus-folders not found after install."
+        fi
     else
         err "install script not found in Papirus-Nord repo."
     fi
