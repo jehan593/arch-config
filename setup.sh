@@ -283,6 +283,7 @@ step "Installing themes"
 yay -S --noconfirm --needed \
     xcursor-simp1e-nord-light \
     nordic-darker-standard-buttons-theme \
+    ttf-martian-mono-nerd \
     papirus-icon-theme \
     && ok "Theme packages installed." \
     || err "Failed to install some theme packages."
