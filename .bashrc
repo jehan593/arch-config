@@ -60,6 +60,8 @@ _run() {
     fi
 }
 
+_info_msg() { printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}[INFO]${RST}  %s\n" "$1"; }
+
 IDEAPAD_CONSERVATION="/sys/bus/platform/drivers/ideapad_acpi/VPC2004:00/conservation_mode"
 
 # ------------------------------------------------------------------------------
@@ -78,8 +80,6 @@ alias reload='source ~/.bashrc && echo -e "${NORD_GREEN}󰬷  Profile Reloaded!$
 rr() { echo -e "${NORD_CYAN}󰮯  Elevating Last Command...${RST}"; sudo $(fc -ln -1); }
 alias conf='vim ~/.bashrc'
 alias confc='[[ -x $(command -v codium) ]] && (echo -e "${NORD_CYAN}󰨞  Opening Configs...${RST}" && codium ~/arch-config/) || echo -e "${NORD_RED}󰅙  VSCodium not found.${RST}"'
-alias upall='_print_header "󰚰" "Full System Update" && yay -Syu --noconfirm && upf && wp'
-alias up-mirrors='_print_header "󰈀" "Updating Mirrors" && sudo reflector --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist && sudo pacman -Syyu'
 alias age='echo -e "${NORD_BLUE}󰃭  OS Age:${RST} $(( ($(date +%s) - $(stat -c %Y /lost+found 2>/dev/null || stat -c %Y /)) / 86400 )) days"'
 
 # ------------------------------------------------------------------------------
@@ -139,6 +139,7 @@ cleanup() {
     _run "Paccache keep 2" sudo paccache -rk2
     _run "Paccache uninstalled" sudo paccache -ruk0
     _run "Yay build cache" rm -rf ~/.cache/yay/*
+    _run "Package list cache" rm -f ~/.cache/yay-pkg-list.cache
     _print_row "󰋊" "Cache Size" "$(du -sh /var/cache/pacman/pkg/ 2>/dev/null | cut -f1)"
     _print_footer
 }
@@ -260,7 +261,6 @@ uninst() {
     fi
 }
 
-
 # ------------------------------------------------------------------------------
 # 6. NETWORK & CONNECTIVITY
 # ------------------------------------------------------------------------------
@@ -281,23 +281,6 @@ cdns-off() {
     _print_row "󰈀" "Custom DNS" "DISABLED"
     _print_row "󰒄" "Provider" "ISP Default"
     _print_footer
-}
-
-termux() {
-    local end_ip=$1; local user="u0_a310"; local port="8022"; local base_ip="192.168.8."
-    if [[ -z "$end_ip" ]]; then
-        _print_header "${NORD_RED}󰄜${RST}" "Termux SSH"
-        _print_row "󰋖" "Usage" "termux <last_octet_or_full_ip>"
-        _print_footer
-        return 1
-    fi
-    local target_ip
-    [[ "$end_ip" != *"."* ]] && target_ip="${base_ip}${end_ip}" || target_ip="$end_ip"
-    _print_header "${NORD_CYAN}󰄜${RST}" "Termux SSH Connection"
-    _print_row "󰩟" "Target" "$target_ip:$port"
-    _print_row "󰀄" "User" "$user"
-    _print_footer
-    ssh -p "$port" "$user@$target_ip"
 }
 
 upf() {
@@ -343,6 +326,12 @@ upc() {
     fi
 }
 
+upall() {
+    _print_header "${NORD_CYAN}󰑮${RST}" "Full System Update"
+    yay -Syu --noconfirm && upf && wp
+    _print_footer
+}
+
 upp() {
     local choice=$(printf "  All\n  core/extra\n  chaotic-aur\n  AUR" | \
         fzf --exact --header "Upgrade Packages :" --height=7 --layout=reverse --border=rounded \
@@ -358,7 +347,7 @@ upp() {
             yay -Syu --noconfirm
             ;;
         *"core/extra"*)
-            _print_header "${NORD_BLUE}󰊠${RST}" "Upgrading Packages | core/extra "
+            _print_header "${NORD_BLUE}󰊠${RST}" "Upgrading Packages | core/extra"
             local chaotic=$(pacman -Sl chaotic-aur 2>/dev/null | awk '{print $2}' | paste -sd,)
             sudo pacman -Syu $( [[ -n "$chaotic" ]] && echo "--ignore $chaotic" ) --noconfirm
             ;;
@@ -383,11 +372,16 @@ upp() {
     _print_footer
 }
 
+up-mirrors() {
+    _print_header "${NORD_BLUE}󰈀${RST}" "Updating Mirrors"
+    sudo reflector --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist
+    sudo pacman -Syyu
+    _print_footer
+}
+
 # ------------------------------------------------------------------------------
 # 7. PRODUCTIVITY TOOLS
 # ------------------------------------------------------------------------------
-
-
 open() { echo -e "${NORD_CYAN}󰝰  Opening...${RST}"; xdg-open "${1:-.}" >/dev/null 2>&1; }
 cd() { if [[ "$1" == "--silent" ]]; then builtin cd "$2"; else builtin cd "$@" && ls -a --color=auto; fi; }
 z() { if command -v __zoxide_z &>/dev/null; then __zoxide_z "$@" && ls -a --color=auto; else builtin cd "$@"; fi; }
@@ -463,8 +457,8 @@ info() {
     printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" "󰒍 System"   "sys, age, reload, conf, confc"
     printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" "󰏖 Packages" "upp, upall, cup, inst, uninst, lpa, cleanup"
     [[ -f "$IDEAPAD_CONSERVATION" ]] && printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" "󱊟 Hardware" "batt-on, batt-off"
-    printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" "󰛳 Network"  "cdns-(on/off), warp, wg-socks, termux"
-    printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" " Utils"    "rr, upf, upc, pirith, open, ff, wp"
+    printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" "󰛳 Network"  "cdns-(on/off), warp, wg-socks"
+    printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" " Utils"    "rr, upf, upc, wp, pirith, open, ff"
     printf "${NORD_BLUE}%-10s${RST}  ${NORD_SNOW_1}%s${RST}\n" " Keybinds" "CTRL+H: history"
     _print_footer
 }

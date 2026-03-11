@@ -66,7 +66,21 @@ for file in .bashrc .vimrc; do
     fi
 done
 
-# .config symlinks - files only
+# Direct .config files (e.g. starship.toml)
+if [[ -d "$DOTDIR/.config" ]]; then
+    for file in "$DOTDIR/.config/"*; do
+        [[ -f "$file" ]] || continue
+        target="$HOME/.config/$(basename "$file")"
+        if [[ -L "$target" ]]; then
+            rm "$target"
+            ok "Removed symlink: ~/.config/$(basename "$file")"
+        else
+            info "Not a symlink, skipping: ~/.config/$(basename "$file")"
+        fi
+    done
+fi
+
+# .config subdirectory files
 if [[ -d "$DOTDIR/.config" ]]; then
     for item in "$DOTDIR/.config/"*/; do
         dir=$(basename "$item")
@@ -123,7 +137,19 @@ else
 fi
 
 # ==============================================================================
-# 5. STOP WARP TUNNEL
+# 5. REMOVE PACMAN CANDY
+# ==============================================================================
+step "Restoring pacman config"
+
+if grep -q "ILoveCandy" /etc/pacman.conf; then
+    sudo sed -i '/^ILoveCandy/d' /etc/pacman.conf
+    ok "ILoveCandy removed from pacman.conf"
+else
+    info "ILoveCandy not found, skipping."
+fi
+
+# ==============================================================================
+# 6. STOP AND REMOVE WARP
 # ==============================================================================
 step "Stopping warp tunnel"
 
@@ -149,7 +175,7 @@ else
 fi
 
 # ==============================================================================
-# 6. REMOVE WG-SOCKS
+# 7. REMOVE WG-SOCKS
 # ==============================================================================
 step "Removing wg-socks"
 
@@ -199,17 +225,7 @@ else
 fi
 
 # ==============================================================================
-# REMOVE PACMAN CANDY
-# ==============================================================================
-if grep -q "ILoveCandy" /etc/pacman.conf; then
-    sudo sed -i '/^ILoveCandy/d' /etc/pacman.conf
-    ok "ILoveCandy removed from pacman.conf"
-else
-    info "ILoveCandy not found, skipping."
-fi
-
-# ==============================================================================
-# REMOVE BRAVE POLICIES
+# 8. REMOVE BRAVE POLICIES
 # ==============================================================================
 step "Removing Brave policies"
 
@@ -222,7 +238,7 @@ else
 fi
 
 # ==============================================================================
-# REMOVE CHAOTIC-AUR
+# 9. REMOVE CHAOTIC-AUR
 # ==============================================================================
 step "Removing Chaotic-AUR"
 
@@ -236,7 +252,7 @@ else
 fi
 
 # ==============================================================================
-# REMOVE WALLPAPERS
+# 10. REMOVE WALLPAPERS
 # ==============================================================================
 step "Removing wallpapers"
 
@@ -255,27 +271,7 @@ else
 fi
 
 # ==============================================================================
-# 8. OPTIONALLY REMOVE PACKAGES
-# ==============================================================================
-step "Optional: Package Removal"
-
-printf "${NORD_POLAR_4}│${RST}  ${NORD_D_BLUE}Targets: wireproxy wgcf bat plocate gvim starship fzf zoxide mpv...${RST}\n"
-printf "${NORD_POLAR_4}│${RST}\n"
-printf "${NORD_POLAR_4}│${RST}  ${NORD_SNOW_1}Remove these packages? [y/N]: ${RST}"
-read -r remove_pkgs
-
-if [[ "$remove_pkgs" =~ ^[Yy]$ ]]; then
-    info "Uninstalling packages..."
-    yay -Rns --noconfirm \
-        wireproxy wgcf bat plocate gvim starship fzf zoxide mpv \
-        wl-clipboard xclip reflector pacman-contrib 2>/dev/null
-    ok "Packages removed."
-else
-    info "Skipping package removal."
-fi
-
-# ==============================================================================
-# REMOVE THEMES
+# 11. REMOVE THEMES
 # ==============================================================================
 step "Removing themes"
 
@@ -284,16 +280,37 @@ read -r remove_themes
 if [[ "$remove_themes" =~ ^[Yy]$ ]]; then
     if yay -Rns --noconfirm \
         xcursor-simp1e-nord-light \
-        nordic-darker-standard-buttons-theme 2>/dev/null; then
+        nordic-darker-standard-buttons-theme \
+        ttf-martian-mono-nerd 2>/dev/null; then
         ok "Themes removed."
     else
-        err "Could not remove themes."
+        err "Could not remove some theme packages."
     fi
     info "papirus-icon-theme kept (required by cinnamon)."
 else
     info "Skipping theme removal."
 fi
 
+# ==============================================================================
+# 12. OPTIONALLY REMOVE PACKAGES
+# ==============================================================================
+step "Optional: Package Removal"
+
+printf "${NORD_POLAR_4}│${RST}  ${NORD_D_BLUE}Targets: wireproxy wgcf wireguard-tools bat plocate gvim starship${RST}\n"
+printf "${NORD_POLAR_4}│${RST}  ${NORD_D_BLUE}         fzf zoxide mpv wl-clipboard xclip reflector pacman-contrib expac${RST}\n"
+printf "${NORD_POLAR_4}│${RST}\n"
+printf "${NORD_POLAR_4}│${RST}  ${NORD_SNOW_1}Remove these packages? [y/N]: ${RST}"
+read -r remove_pkgs
+
+if [[ "$remove_pkgs" =~ ^[Yy]$ ]]; then
+    info "Uninstalling packages..."
+    yay -Rns --noconfirm \
+        wireproxy wgcf wireguard-tools bat plocate gvim starship \
+        fzf zoxide mpv wl-clipboard xclip reflector pacman-contrib expac 2>/dev/null
+    ok "Packages removed."
+else
+    info "Skipping package removal."
+fi
 
 # ==============================================================================
 # DONE
