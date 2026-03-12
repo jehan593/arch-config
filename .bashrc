@@ -328,7 +328,7 @@ upc() {
 
 upall() {
     _print_header "${NORD_CYAN}󰑮${RST}" "Full System Update"
-    yay -Syu --noconfirm && upf && wp
+    yay -Syu --noconfirm && upf && wp && upc
     _print_footer
 }
 
