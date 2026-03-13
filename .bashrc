@@ -153,9 +153,9 @@ cup() {
             if [ "$show_size" = "true" ]; then
                 size_info=$($cmd -Si "$pkg" 2>/dev/null | grep "Download Size" | cut -d: -f2 | xargs)
                 [[ -z "$size_info" ]] && size_info="0.00 B"
-                printf "${NORD_GREEN}%-25s${RST} ${NORD_POLAR_4}│${RST} %-25s ${NORD_POLAR_4}│${RST} %10s\n" "$pkg" "$version" "$size_info"
+                printf "${NORD_GREEN}%-30s${RST} ${NORD_POLAR_4}│${RST} %-52s ${NORD_POLAR_4}│${RST} %+15s\n" "$pkg" "$version" "$size_info"
             else
-                printf "${NORD_GREEN}%-25s${RST} ${NORD_POLAR_4}│${RST} %-25s\n" "$pkg" "$version"
+                printf "${NORD_GREEN}%-30s${RST} ${NORD_POLAR_4}│${RST} %-52s\n" "$pkg" "$version"
             fi
         done)
         echo "$formatted_list" | column -t -s "|"
