@@ -139,7 +139,7 @@ command -v bat &>/dev/null && alias cat='bat'
 alias clear='clear && sys'
 alias reload='source ~/.bashrc && echo -e "${NORD_GREEN}󰑓  Profile Reloaded!${RST}"'
 rr() { echo -e "${NORD_CYAN}󰮯  Elevating Last Command...${RST}"; sudo $(fc -ln -1); }
-alias conf='[[ -x $(command -v zed) ]] && (echo -e "${NORD_CYAN}󱃖  Opening Configs...${RST}" && zed ~/arch-config/) || echo -e "${NORD_RED}󰅙  zed not found.${RST}"'
+alias conf='[[ -x $(command -v zeditor) ]] && (echo -e "${NORD_CYAN}󱃖  Opening Configs...${RST}" && zeditor ~/arch-config/) || echo -e "${NORD_RED}󰅙  zed not found.${RST}"'
 alias age='echo -e "${NORD_BLUE}󰃭  OS Age:${RST} $(( ($(date +%s) - $(stat -c %Y /lost+found 2>/dev/null || stat -c %Y /)) / 86400 )) days"'
 
 # ------------------------------------------------------------------------------
