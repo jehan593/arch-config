@@ -15,51 +15,51 @@ NORD_RED='\e[38;2;191;97;106m'
 NORD_ORANGE='\e[38;2;208;135;112m'
 RST='\e[0m'
 
-HEADER_LINE="${NORD_POLAR_4}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RST}"
-
 # --- UI Helpers ---
+
 _print_header() {
-    echo -e "\n${NORD_CYAN}>>${RST}  ${NORD_SNOW_1}${1}${RST}"
-    echo -e "${HEADER_LINE}"
+    echo -e "\n${NORD_CYAN}${1}  ${NORD_SNOW_1}${2}${RST}"
+    echo -e "${NORD_POLAR_4}─────────────────────────────────────────────────────${RST}"
 }
 
-_print_footer() {
-    echo -e "${HEADER_LINE}\n"
+_print_status() {
+    local color=$NORD_BLUE
+    [[ "$1" == "󰄬" ]] && color=$NORD_GREEN
+    [[ "$1" == "󰅙" ]] && color=$NORD_RED
+    [[ "$1" == "󰀦" ]] && color=$NORD_ORANGE
+    echo -e "${color}${1}  ${2}${RST}"
 }
 
-ok()   { printf "${NORD_POLAR_4}│${RST}  ${NORD_GREEN}[OK]${RST}    %s\n" "$1"; }
-info() { printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}[INFO]${RST}  %s\n" "$1"; }
-err()  { printf "${NORD_POLAR_4}│${RST}  ${NORD_RED}[ERR]${RST}   %s\n" "$1"; }
-step() { _print_footer; _print_header "$1"; }
+ok()   { _print_status "󰄬" "$1"; }
+err()  { _print_status "󰅙" "$1"; }
+info() { _print_status "󰋼" "$1"; }
 
 # --- Pre-flight checks ---
 
 if [[ "$EUID" -eq 0 ]]; then
-    echo -e "\n${NORD_RED}[ERR]  Do not run this script as root.${RST}\n"
+    echo -e "\n${NORD_RED}󰅙  Do not run this script as root.${RST}\n"
     exit 1
 fi
 
 DOTDIR="$HOME/arch-config"
 
-echo -e "\n${NORD_CYAN}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${RST}"
-echo -e "${NORD_CYAN}┃${RST}          ${NORD_SNOW_1}Arch Dotfiles Setup${RST}               ${NORD_CYAN}┃${RST}"
-echo -e "${NORD_CYAN}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${RST}"
+echo -e "\n${NORD_CYAN}󰣇  Arch Dotfiles Setup${RST}\n"
 
-_print_header "Pre-flight Checks"
+_print_header "󰒓" "Pre-flight Checks"
 
 if [[ ! -d "$DOTDIR" ]]; then
     err "arch-config not found at $DOTDIR"
     err "Clone your repo first: git clone <url> ~/arch-config"
-    _print_footer
+    echo ""
     exit 1
 fi
 ok "arch-config found at $DOTDIR"
-_print_footer
+echo ""
 
 # ==============================================================================
 # 1. AUR HELPER (yay)
 # ==============================================================================
-step "Checking AUR helper (yay)"
+_print_header "󰏖" "AUR Helper (yay)"
 
 if ! command -v yay &>/dev/null; then
     info "Installing yay..."
@@ -72,11 +72,12 @@ if ! command -v yay &>/dev/null; then
 else
     ok "yay already installed."
 fi
+echo ""
 
 # ==============================================================================
 # 2. CHAOTIC-AUR
 # ==============================================================================
-step "Setting up Chaotic-AUR"
+_print_header "󰒓" "Chaotic-AUR"
 
 if ! grep -q "\[chaotic-aur\]" /etc/pacman.conf; then
     info "Adding Chaotic-AUR keyring and mirrorlist..."
@@ -90,13 +91,13 @@ if ! grep -q "\[chaotic-aur\]" /etc/pacman.conf; then
 else
     ok "Chaotic-AUR already configured."
 fi
+echo ""
 
 # ==============================================================================
 # 3. CORE DEPENDENCIES
 # ==============================================================================
-step "Installing dependencies"
+_print_header "󰏖" "Installing Dependencies"
 
-# Replace vim with gvim for clipboard support
 if pacman -Qq vim &>/dev/null && ! pacman -Qq gvim &>/dev/null; then
     info "Replacing vim with gvim for clipboard support..."
     if sudo pacman -Rdd --noconfirm vim; then
@@ -107,23 +108,11 @@ if pacman -Qq vim &>/dev/null && ! pacman -Qq gvim &>/dev/null; then
 fi
 
 DEPENDENCIES=(
-    "wireproxy"
-    "wgcf"
-    "wireguard-tools"
-    "bat"
-    "plocate"
-    "curl"
-    "gvim"
-    "starship"
-    "fzf"
-    "zoxide"
-    "mpv"
-    "wl-clipboard"
-    "xclip"
-    "reflector"
-    "pacman-contrib"
-    "git"
-    "expac"
+    "wireproxy" "wgcf" "wireguard-tools"
+    "bat" "plocate" "curl" "gvim"
+    "starship" "fzf" "zoxide"
+    "mpv" "wl-clipboard" "xclip"
+    "reflector" "pacman-contrib" "git" "expac" "qview"
 )
 
 info "Updating package database..."
@@ -133,29 +122,27 @@ yay -S --needed --noconfirm "${DEPENDENCIES[@]}" \
 
 info "Initializing plocate database..."
 sudo updatedb
+echo ""
 
 # ==============================================================================
 # 4. SYMLINKS
 # ==============================================================================
-step "Creating symlinks"
+_print_header "󰈔" "Creating Symlinks"
 
 mkdir -p "$HOME/.config"
 
-# Root dotfiles
 ln -sf "$DOTDIR/.bashrc" "$HOME/.bashrc"
-ok "Linked .bashrc -> ~/.bashrc"
+ok "Linked .bashrc → ~/.bashrc"
 
 ln -sf "$DOTDIR/.vimrc" "$HOME/.vimrc"
-ok "Linked .vimrc -> ~/.vimrc"
+ok "Linked .vimrc → ~/.vimrc"
 
-# Direct .config files (e.g. starship.toml)
 for file in "$DOTDIR/.config/"*; do
     [[ -f "$file" ]] || continue
     ln -sf "$file" "$HOME/.config/$(basename "$file")"
     ok "Linked .config/$(basename "$file")"
 done
 
-# .config subdirectory files - link files only, not folders
 for item in "$DOTDIR/.config/"*/; do
     dir=$(basename "$item")
     mkdir -p "$HOME/.config/$dir"
@@ -166,7 +153,6 @@ for item in "$DOTDIR/.config/"*/; do
     done
 done
 
-# Nord vim theme
 mkdir -p "$HOME/.vim/colors"
 if [[ ! -f "$HOME/.vim/colors/nord.vim" ]]; then
     info "Downloading Nord vim theme..."
@@ -178,19 +164,18 @@ else
     ok "Nord vim theme already exists."
 fi
 
-# bat Nord theme
 info "Configuring bat theme..."
 mkdir -p "$HOME/.config/bat"
 echo '--theme="Nord"' > "$HOME/.config/bat/config"
 ok "bat configured with Nord theme."
+echo ""
 
 # ==============================================================================
 # 5. PASSWORDLESS UPDATEDB
 # ==============================================================================
-step "Configuring passwordless updatedb"
+_print_header "󰒓" "Passwordless updatedb"
 
 SUDOERS_FILE="/etc/sudoers.d/updatedb-nopasswd"
-
 if [[ ! -f "$SUDOERS_FILE" ]]; then
     SUDOERS_TMP="${SUDOERS_FILE}.tmp"
     echo "$USER ALL=(ALL) NOPASSWD: /usr/bin/updatedb" | sudo tee "$SUDOERS_TMP" > /dev/null
@@ -200,16 +185,17 @@ if [[ ! -f "$SUDOERS_FILE" ]]; then
         ok "Sudoers rule added for updatedb."
     else
         sudo rm -f "$SUDOERS_TMP"
-        err "Sudoers validation failed. Skipping passwordless updatedb."
+        err "Sudoers validation failed — skipping passwordless updatedb."
     fi
 else
     ok "Sudoers rule already exists."
 fi
+echo ""
 
 # ==============================================================================
 # 6. PACMAN CANDY
 # ==============================================================================
-step "Configuring pacman"
+_print_header "󰮯" "Pacman Configuration"
 
 if ! grep -q "ILoveCandy" /etc/pacman.conf; then
     sudo sed -i 's/^#Color/Color/' /etc/pacman.conf
@@ -218,11 +204,12 @@ if ! grep -q "ILoveCandy" /etc/pacman.conf; then
 else
     ok "ILoveCandy already set."
 fi
+echo ""
 
 # ==============================================================================
 # 7. WG-SOCKS SETUP
 # ==============================================================================
-step "Setting up wg-socks manager"
+_print_header "󰒄" "wg-socks Manager"
 
 if [[ -f "$DOTDIR/scripts/wg-socks.sh" ]]; then
     chmod +x "$DOTDIR/scripts/wg-socks.sh"
@@ -231,11 +218,12 @@ if [[ -f "$DOTDIR/scripts/wg-socks.sh" ]]; then
 else
     info "wg-socks script not found in $DOTDIR/scripts/"
 fi
+echo ""
 
 # ==============================================================================
 # 8. WARP SETUP
 # ==============================================================================
-step "Setting up warp manager"
+_print_header "󰖂" "WARP Manager"
 
 if [[ -f "$DOTDIR/scripts/warp.sh" ]]; then
     chmod +x "$DOTDIR/scripts/warp.sh"
@@ -244,11 +232,12 @@ if [[ -f "$DOTDIR/scripts/warp.sh" ]]; then
 else
     info "warp.sh not found in $DOTDIR/scripts/"
 fi
+echo ""
 
 # ==============================================================================
 # 9. BRAVE POLICIES
 # ==============================================================================
-step "Configuring Brave policies"
+_print_header "󰈹" "Brave Policies"
 
 BRAVE_POLICY_DIR="/etc/brave/policies/managed"
 BRAVE_POLICY_SRC="$DOTDIR/.config/brave/policies.json"
@@ -260,11 +249,12 @@ if [[ -f "$BRAVE_POLICY_SRC" ]]; then
 else
     info "policies.json not found in repo, skipping."
 fi
+echo ""
 
 # ==============================================================================
 # 10. WALLPAPERS
 # ==============================================================================
-step "Setting up wallpapers"
+_print_header "󰹧" "Wallpapers"
 
 WALLPAPERS_DIR="$HOME/Pictures/config-wallpapers"
 WALLPAPERS_REPO="https://github.com/jehan593/my-wallpapers"
@@ -275,15 +265,16 @@ if [[ ! -d "$WALLPAPERS_DIR" ]]; then
         && ok "Wallpapers cloned to $WALLPAPERS_DIR" \
         || err "Failed to clone wallpapers repo."
     git -C "$WALLPAPERS_DIR" config --local credential.helper store
-    ok "Git credential store configured for wallpapers repo."
+    ok "Git credential store configured."
 else
     ok "Wallpapers already cloned."
 fi
+echo ""
 
 # ==============================================================================
 # 11. THEMES
 # ==============================================================================
-step "Installing themes"
+_print_header "󰔎" "Installing Themes"
 
 yay -S --noconfirm --needed \
     xcursor-simp1e-nord-light \
@@ -293,7 +284,6 @@ yay -S --noconfirm --needed \
     && ok "Theme packages installed." \
     || err "Failed to install some theme packages."
 
-# Papirus Nord folder colors
 info "Applying Papirus Nord folder colors (Frost Blue 4)..."
 PAPIRUS_NORD_DIR="/tmp/papirus-nord-install"
 rm -rf "$PAPIRUS_NORD_DIR"
@@ -320,11 +310,13 @@ if git clone https://github.com/Adapta-Projects/Papirus-Nord "$PAPIRUS_NORD_DIR"
 else
     err "Failed to clone Papirus-Nord repo."
 fi
+echo ""
 
 # ==============================================================================
 # DONE
 # ==============================================================================
-_print_footer
-echo -e "${NORD_GREEN}Setup complete!${RST}"
-echo -e "${NORD_D_BLUE}>> Run: source ~/.bashrc${RST}"
-echo -e "${NORD_D_BLUE}>> Note: Install a Nerd Font for full icon support${RST}\n"
+_print_status "󰄬" "Setup complete! Please restart your shell."
+echo ""
+echo -e "${NORD_D_BLUE}󰁔  Run: source ~/.bashrc${RST}"
+echo -e "${NORD_D_BLUE}󰁔  Install a Nerd Font for full icon support${RST}"
+echo ""

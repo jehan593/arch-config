@@ -15,55 +15,47 @@ NORD_RED='\e[38;2;191;97;106m'
 NORD_ORANGE='\e[38;2;208;135;112m'
 RST='\e[0m'
 
-HEADER_LINE="${NORD_POLAR_4}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RST}"
-
 DOTDIR="$HOME/arch-config"
 
 # --- UI Helpers ---
+
 _print_header() {
-    echo -e "\n${NORD_RED}!!${RST}  ${NORD_SNOW_1}${1}${RST}"
-    echo -e "${HEADER_LINE}"
+    echo -e "\n${NORD_RED}${1}  ${NORD_SNOW_1}${2}${RST}"
+    echo -e "${NORD_POLAR_4}─────────────────────────────────────────────────────${RST}"
 }
 
-_print_footer() {
-    echo -e "${HEADER_LINE}\n"
+_print_status() {
+    local color=$NORD_BLUE
+    [[ "$1" == "󰄬" ]] && color=$NORD_GREEN
+    [[ "$1" == "󰅙" ]] && color=$NORD_RED
+    [[ "$1" == "󰀦" ]] && color=$NORD_ORANGE
+    echo -e "${color}${1}  ${2}${RST}"
 }
 
-_pass_thru() {
-    while IFS= read -r line; do
-        printf '\e[38;2;118;138;161m│  %s\e[0m\n' "$line"
-    done
-}
+ok()   { _print_status "󰄬" "$1"; }
+err()  { _print_status "󰅙" "$1"; }
+info() { _print_status "󰋼" "$1"; }
 
-ok()   { printf "${NORD_POLAR_4}│${RST}  ${NORD_GREEN}[OK]${RST}    %s\n" "$1"; }
-info() { printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}[INFO]${RST}  %s\n" "$1"; }
-err()  { printf "${NORD_POLAR_4}│${RST}  ${NORD_RED}[ERR]${RST}   %s\n" "$1"; }
-step() { _print_footer; _print_header "$1"; }
-
-# --- Pre-flight checks ---
+# --- Pre-flight ---
 
 if [[ "$EUID" -eq 0 ]]; then
-    echo -e "\n${NORD_RED}[ERR]  Do not run this script as root.${RST}\n"
+    echo -e "\n${NORD_RED}󰅙  Do not run this script as root.${RST}\n"
     exit 1
 fi
 
-echo -e "\n${NORD_RED}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${RST}"
-echo -e "${NORD_RED}┃${RST}           ${NORD_SNOW_1}Arch Dotfiles Reset${RST}              ${NORD_RED}┃${RST}"
-echo -e "${NORD_RED}┃${RST}      ${NORD_ORANGE}This will UNDO everything setup!${RST}      ${NORD_RED}┃${RST}"
-echo -e "${NORD_RED}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${RST}"
+echo -e "\n${NORD_RED}󰀦  Arch Dotfiles Reset${RST}"
+echo -e "${NORD_ORANGE}This will UNDO everything setup.sh configured.${RST}\n"
 
-_print_header "Pre-flight"
-printf "${NORD_POLAR_4}│${RST}  ${NORD_ORANGE}[WARN]${RST}  Are you sure you want to reset? [y/N]: "
-read -r confirm
-[[ "$confirm" =~ ^[Yy]$ ]] || { info "Aborted."; _print_footer; exit 0; }
-_print_footer
+_print_header "󰒓" "Pre-flight"
+read -p "$(echo -e "${NORD_ORANGE}Are you sure you want to reset? [y/N]: ${RST}")" confirm
+[[ "$confirm" =~ ^[Yy]$ ]] || { info "Aborted."; echo ""; exit 0; }
+echo ""
 
 # ==============================================================================
 # 1. REMOVE SYMLINKS
 # ==============================================================================
-step "Removing symlinks"
+_print_header "󰆑" "Removing Symlinks"
 
-# Root dotfiles
 for file in .bashrc .vimrc; do
     if [[ -L "$HOME/$file" ]]; then
         rm "$HOME/$file"
@@ -73,7 +65,6 @@ for file in .bashrc .vimrc; do
     fi
 done
 
-# Direct .config files (e.g. starship.toml)
 if [[ -d "$DOTDIR/.config" ]]; then
     for file in "$DOTDIR/.config/"*; do
         [[ -f "$file" ]] || continue
@@ -87,7 +78,6 @@ if [[ -d "$DOTDIR/.config" ]]; then
     done
 fi
 
-# .config subdirectory files
 if [[ -d "$DOTDIR/.config" ]]; then
     for item in "$DOTDIR/.config/"*/; do
         dir=$(basename "$item")
@@ -105,11 +95,12 @@ if [[ -d "$DOTDIR/.config" ]]; then
 else
     info "No .config directory found in repo, skipping."
 fi
+echo ""
 
 # ==============================================================================
 # 2. REMOVE BAT CONFIG
 # ==============================================================================
-step "Removing bat config"
+_print_header "󰅌" "Bat Config"
 
 if [[ -f "$HOME/.config/bat/config" ]]; then
     rm "$HOME/.config/bat/config"
@@ -117,11 +108,12 @@ if [[ -f "$HOME/.config/bat/config" ]]; then
 else
     info "bat config not found, skipping."
 fi
+echo ""
 
 # ==============================================================================
 # 3. REMOVE NORD VIM THEME
 # ==============================================================================
-step "Removing Nord vim theme"
+_print_header "󰄮" "Nord Vim Theme"
 
 if [[ -f "$HOME/.vim/colors/nord.vim" ]]; then
     rm "$HOME/.vim/colors/nord.vim"
@@ -129,11 +121,12 @@ if [[ -f "$HOME/.vim/colors/nord.vim" ]]; then
 else
     info "Nord vim theme not found, skipping."
 fi
+echo ""
 
 # ==============================================================================
 # 4. REMOVE SUDOERS RULE
 # ==============================================================================
-step "Removing passwordless updatedb rule"
+_print_header "󰒓" "Passwordless updatedb"
 
 SUDOERS_FILE="/etc/sudoers.d/updatedb-nopasswd"
 if [[ -f "$SUDOERS_FILE" ]]; then
@@ -142,11 +135,12 @@ if [[ -f "$SUDOERS_FILE" ]]; then
 else
     info "Sudoers rule not found, skipping."
 fi
+echo ""
 
 # ==============================================================================
 # 5. REMOVE PACMAN CANDY
 # ==============================================================================
-step "Restoring pacman config"
+_print_header "󰮯" "Pacman Config"
 
 if grep -q "ILoveCandy" /etc/pacman.conf; then
     sudo sed -i '/^ILoveCandy/d' /etc/pacman.conf
@@ -154,15 +148,16 @@ if grep -q "ILoveCandy" /etc/pacman.conf; then
 else
     info "ILoveCandy not found, skipping."
 fi
+echo ""
 
 # ==============================================================================
 # 6. STOP AND REMOVE WARP
 # ==============================================================================
-step "Stopping warp tunnel"
+_print_header "󰖂" "WARP Tunnel"
 
 if sudo wg show warp &>/dev/null; then
-    sudo wg-quick down "$HOME/.config/warp/warp.conf" 2>&1 | _pass_thru
-    ok "Warp tunnel stopped."
+    sudo wg-quick down "$HOME/.config/warp/warp.conf"
+    _print_status "$([ $? -eq 0 ] && echo 󰄬 || echo 󰅙)" "Warp tunnel stopped"
 else
     info "Warp tunnel not running, skipping."
 fi
@@ -181,11 +176,12 @@ if [[ -L "/usr/local/bin/warp" ]]; then
 else
     info "warp symlink not found, skipping."
 fi
+echo ""
 
 # ==============================================================================
 # 7. REMOVE WG-SOCKS
 # ==============================================================================
-step "Removing wg-socks"
+_print_header "󰒄" "wg-socks"
 
 if [[ -L "/usr/local/bin/wg-socks" ]]; then
     sudo rm -f "/usr/local/bin/wg-socks"
@@ -197,11 +193,9 @@ fi
 shopt -s nullglob
 services=(/etc/systemd/system/*-wgsocks.service)
 if [[ ${#services[@]} -gt 0 ]]; then
-    printf "${NORD_POLAR_4}│${RST}  ${NORD_ORANGE}[WARN]${RST}  Found ${#services[@]} wg-socks tunnel(s). Stop and remove them? [y/N]: "
-    read -r remove_services
+    read -p "$(echo -e "${NORD_ORANGE}Found ${#services[@]} wg-socks tunnel(s). Stop and remove them? [y/N]: ${RST}")" remove_services
     if [[ "$remove_services" =~ ^[Yy]$ ]]; then
-
-        # Backup first
+        echo ""
         BACKUP_DIR="$HOME/Desktop/wireproxy-backup-$(date +%Y%m%d_%H%M%S)"
         if [[ -d "/etc/wireproxy" ]]; then
             CONFS=$(sudo find /etc/wireproxy -maxdepth 1 -name "*.conf" 2>/dev/null)
@@ -213,8 +207,6 @@ if [[ ${#services[@]} -gt 0 ]]; then
                 ok "Configs backed up to $BACKUP_DIR"
             fi
         fi
-
-        # Remove services
         for service in "${services[@]}"; do
             NAME=$(basename "$service" .service)
             sudo systemctl stop "$NAME"
@@ -231,11 +223,12 @@ if [[ ${#services[@]} -gt 0 ]]; then
 else
     info "No wg-socks tunnels found, skipping."
 fi
+echo ""
 
 # ==============================================================================
 # 8. REMOVE BRAVE POLICIES
 # ==============================================================================
-step "Removing Brave policies"
+_print_header "󰈹" "Brave Policies"
 
 BRAVE_POLICY_FILE="/etc/brave/policies/managed/arch-config.json"
 if [[ -f "$BRAVE_POLICY_FILE" ]]; then
@@ -244,30 +237,31 @@ if [[ -f "$BRAVE_POLICY_FILE" ]]; then
 else
     info "Brave policies not found, skipping."
 fi
+echo ""
 
 # ==============================================================================
 # 9. REMOVE CHAOTIC-AUR
 # ==============================================================================
-step "Removing Chaotic-AUR"
+_print_header "󰒓" "Chaotic-AUR"
 
 if grep -q "\[chaotic-aur\]" /etc/pacman.conf; then
     sudo sed -i '/\[chaotic-aur\]/,/Include.*chaotic-mirrorlist/d' /etc/pacman.conf
-    sudo pacman -Rns --noconfirm chaotic-keyring chaotic-mirrorlist 2>&1 | _pass_thru
+    sudo pacman -Rns --noconfirm chaotic-keyring chaotic-mirrorlist
     sudo pacman -Syy
     ok "Chaotic-AUR removed."
 else
     info "Chaotic-AUR not configured, skipping."
 fi
+echo ""
 
 # ==============================================================================
 # 10. REMOVE WALLPAPERS
 # ==============================================================================
-step "Removing wallpapers"
+_print_header "󰹧" "Wallpapers"
 
 WALLPAPERS_DIR="$HOME/Pictures/config-wallpapers"
 if [[ -d "$WALLPAPERS_DIR" ]]; then
-    printf "${NORD_POLAR_4}│${RST}  ${NORD_ORANGE}[WARN]${RST}  Remove wallpapers directory? [y/N]: "
-    read -r remove_wallpapers
+    read -p "$(echo -e "${NORD_ORANGE}Remove wallpapers directory? [y/N]: ${RST}")" remove_wallpapers
     if [[ "$remove_wallpapers" =~ ^[Yy]$ ]]; then
         rm -rf "$WALLPAPERS_DIR"
         ok "Wallpapers removed."
@@ -277,14 +271,14 @@ if [[ -d "$WALLPAPERS_DIR" ]]; then
 else
     info "Wallpapers directory not found, skipping."
 fi
+echo ""
 
 # ==============================================================================
 # 11. REMOVE THEMES
 # ==============================================================================
-step "Removing themes"
+_print_header "󰔎" "Themes"
 
-printf "${NORD_POLAR_4}│${RST}  ${NORD_SNOW_1}Remove theme packages? [y/N]: ${RST}"
-read -r remove_themes
+read -p "$(echo -e "${NORD_ORANGE}Remove theme packages? [y/N]: ${RST}")" remove_themes
 if [[ "$remove_themes" =~ ^[Yy]$ ]]; then
     if yay -Rns --noconfirm \
         xcursor-simp1e-nord-light \
@@ -298,32 +292,31 @@ if [[ "$remove_themes" =~ ^[Yy]$ ]]; then
 else
     info "Skipping theme removal."
 fi
+echo ""
 
 # ==============================================================================
-# 12. OPTIONALLY REMOVE PACKAGES
+# 12. OPTIONAL: PACKAGE REMOVAL
 # ==============================================================================
-step "Optional: Package Removal"
+_print_header "󰏖" "Optional: Package Removal"
 
-printf "${NORD_POLAR_4}│${RST}  ${NORD_D_BLUE}Targets: wireproxy wgcf wireguard-tools bat plocate gvim starship${RST}\n"
-printf "${NORD_POLAR_4}│${RST}  ${NORD_D_BLUE}         fzf zoxide mpv wl-clipboard xclip reflector pacman-contrib expac${RST}\n"
-printf "${NORD_POLAR_4}│${RST}\n"
-printf "${NORD_POLAR_4}│${RST}  ${NORD_SNOW_1}Remove these packages? [y/N]: ${RST}"
-read -r remove_pkgs
+info "Targets: wireproxy wgcf wireguard-tools bat plocate gvim starship"
+info "         fzf zoxide mpv wl-clipboard xclip reflector pacman-contrib expac"
+read -p "$(echo -e "${NORD_ORANGE}Remove these packages? [y/N]: ${RST}")" remove_pkgs
 
 if [[ "$remove_pkgs" =~ ^[Yy]$ ]]; then
-    info "Uninstalling packages..."
     yay -Rns --noconfirm \
         wireproxy wgcf wireguard-tools bat plocate gvim starship \
-        fzf zoxide mpv wl-clipboard xclip reflector pacman-contrib expac 2>&1 | _pass_thru
-    ok "Packages removed."
+        fzf zoxide mpv wl-clipboard xclip reflector pacman-contrib expac
+    _print_status "$([ $? -eq 0 ] && echo 󰄬 || echo 󰅙)" "Packages removed"
 else
     info "Skipping package removal."
 fi
+echo ""
 
 # ==============================================================================
 # DONE
 # ==============================================================================
-_print_footer
-echo -e "${NORD_GREEN}Reset complete!${RST}"
-echo -e "${NORD_D_BLUE}>> Your dotfiles repository remains intact.${RST}"
-echo -e "${NORD_D_BLUE}>> Open a new terminal session to finish.${RST}\n"
+_print_status "󰄬" "Reset complete! Please open a new terminal session."
+echo ""
+echo -e "${NORD_D_BLUE}󰁔  Your dotfiles repository remains intact.${RST}"
+echo ""

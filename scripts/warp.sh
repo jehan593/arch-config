@@ -11,11 +11,9 @@ NORD_CYAN='\e[38;2;143;188;187m'
 NORD_BLUE='\e[38;2;136;192;208m'
 NORD_GREEN='\e[38;2;163;190;140m'
 NORD_RED='\e[38;2;191;97;106m'
+NORD_ORANGE='\e[38;2;208;135;112m'
 RST='\e[0m'
 
-HEADER_LINE="${NORD_POLAR_4}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RST}"
-
-# Store real user info before elevation
 REAL_USER="${SUDO_USER:-$USER}"
 REAL_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6)
 
@@ -25,36 +23,23 @@ TUNNEL="warp"
 
 # Elevation check
 if [ "$EUID" -ne 0 ]; then
-    echo -e "\n${NORD_CYAN}󰮯${RST}  ${NORD_SNOW_1}Elevating privileges for WARP...${RST}"
+    echo -e "\n${NORD_CYAN}󰌋  Elevating with gsudo...${RST}"
     exec sudo bash "$(realpath "$0")" "$@"
 fi
 
 # --- UI Helpers ---
 
 _print_header() {
-    echo -e "\n${1}  ${NORD_SNOW_1}${2}${RST}"
-    echo -e "${HEADER_LINE}"
-}
-
-_print_footer() {
-    echo -e "${HEADER_LINE}\n"
-}
-
-_print_row() {
-    printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%s${RST} %-12s ${NORD_SNOW_1}%s${RST}\n" "$1" "$2" "$3"
+    echo -e "\n${NORD_CYAN}${1}  ${NORD_SNOW_1}${2}${RST}"
+    echo -e "${NORD_POLAR_4}─────────────────────────────────────────────────────${RST}"
 }
 
 _print_status() {
     local color=$NORD_BLUE
     [[ "$1" == "󰄬" ]] && color=$NORD_GREEN
     [[ "$1" == "󰅙" ]] && color=$NORD_RED
-    printf "${NORD_POLAR_4}│${RST}  ${color}%s${RST}  %s\n" "$1" "$2"
-}
-
-_pass_thru() {
-    while IFS= read -r line; do
-        printf '\e[38;2;118;138;161m│  %s\e[0m\n' "$line"
-    done
+    [[ "$1" == "󰀦" ]] && color=$NORD_ORANGE
+    echo -e "${color}${1}  ${2}${RST}"
 }
 
 _fmt_bytes() {
@@ -73,66 +58,65 @@ warp_on() {
         warp_rotate
     fi
 
-    _print_header "${NORD_CYAN}󰖂${RST}" "WireGuard WARP"
-    wg-quick up "$WARP_CONF" 2>&1 | _pass_thru
-    if [[ ${PIPESTATUS[0]} -eq 0 ]]; then
-        _print_row "󰤨" "Status" "CONNECTED"
+    _print_header "󰖂" "WireGuard WARP"
+    wg-quick up "$WARP_CONF"
+    if [[ $? -eq 0 ]]; then
+        _print_status "󰤨" "Connected"
     else
-        _print_row "󰅙" "Status" "Failed to connect"
+        _print_status "󰅙" "Failed to connect"
     fi
-    _print_footer
+    echo ""
 }
 
 warp_off() {
-    _print_header "${NORD_RED}󰖂${RST}" "WireGuard WARP"
-    wg-quick down "$WARP_CONF" 2>&1 | _pass_thru
-    if [[ ${PIPESTATUS[0]} -eq 0 ]]; then
-        _print_row "󰤭" "Status" "DISCONNECTED"
+    _print_header "󰖂" "WireGuard WARP"
+    wg-quick down "$WARP_CONF"
+    if [[ $? -eq 0 ]]; then
+        _print_status "󰤭" "Disconnected"
     else
-        _print_row "󰅙" "Status" "Failed to disconnect"
+        _print_status "󰅙" "Failed to disconnect"
     fi
-    _print_footer
+    echo ""
 }
 
 warp_rotate() {
     if wg show "$TUNNEL" &>/dev/null; then
-        _print_header "${NORD_RED}󰅙${RST}" "Error"
         _print_status "󰅙" "Tunnel is active. Run: warp off first."
-        _print_footer; exit 1
+        return 1
     fi
 
-    _print_header "${NORD_CYAN}󰖂${RST}" "Rotating WARP Credentials"
+    _print_header "󰖂" "Rotating WARP Credentials"
 
     if ! command -v wgcf &>/dev/null; then
         _print_status "󰅙" "wgcf not found. Install it: yay -S wgcf"
-        _print_footer; exit 1
+        echo ""; exit 1
     fi
 
     mkdir -p "$WARP_DIR"
-    cd "$WARP_DIR" || { _print_status "󰅙" "Failed to enter $WARP_DIR"; _print_footer; exit 1; }
+    cd "$WARP_DIR" || { _print_status "󰅙" "Failed to enter $WARP_DIR"; echo ""; exit 1; }
 
     if [[ -f "$WARP_DIR/wgcf-account.toml" ]]; then
         _print_status "󰚰" "Updating existing account..."
-        wgcf update 2>&1 | _pass_thru
-        if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
+        wgcf update
+        if [[ $? -ne 0 ]]; then
             _print_status "󰅙" "Account update failed."
-            _print_footer; exit 1
+            echo ""; exit 1
         fi
     else
         _print_status "󰀄" "Registering new account..."
-        wgcf register --accept-tos 2>&1 | _pass_thru
-        if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
+        wgcf register --accept-tos
+        if [[ $? -ne 0 ]]; then
             _print_status "󰅙" "Account registration failed."
-            _print_footer; exit 1
+            echo ""; exit 1
         fi
     fi
-    _print_row "󰄬" "Account" "Done"
+    _print_status "󰄬" "Account ready"
 
     _print_status "󰒓" "Generating new config..."
-    wgcf generate --profile "$WARP_DIR/wgcf-profile.conf" 2>&1 | _pass_thru
-    if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
+    wgcf generate --profile "$WARP_DIR/wgcf-profile.conf"
+    if [[ $? -ne 0 ]]; then
         _print_status "󰅙" "Config generation failed."
-        _print_footer; exit 1
+        echo ""; exit 1
     fi
 
     if [[ -f "$WARP_DIR/wgcf-profile.conf" ]]; then
@@ -140,51 +124,53 @@ warp_rotate() {
         chmod 600 "$WARP_CONF"
 
         sed -i '/^DNS/d' "$WARP_CONF"
-        _print_row "󰄬" "DNS" "Removed (preserving NextDNS)"
+        _print_status "󰄬" "DNS removed (preserving NextDNS)"
 
         ENDPOINT_IP=$(getent ahostsv4 engage.cloudflareclient.com | awk '{print $1}' | head -n1)
         if [[ -n "$ENDPOINT_IP" ]]; then
             sed -i "s/engage.cloudflareclient.com/$ENDPOINT_IP/" "$WARP_CONF"
-            _print_row "󰄬" "Endpoint" "$ENDPOINT_IP"
+            _print_status "󰄬" "Endpoint resolved: $ENDPOINT_IP"
         else
-            _print_row "󰀦" "Endpoint" "Could not resolve, keeping hostname"
+            _print_status "󰀦" "Could not resolve endpoint, keeping hostname"
         fi
 
-        _print_row "󰄬" "Config" "Saved to $WARP_CONF"
+        _print_status "󰄬" "Config saved to $WARP_CONF"
     else
         _print_status "󰅙" "Failed to generate config."
-        _print_footer; exit 1
+        echo ""; exit 1
     fi
 
-    _print_footer
+    echo ""
 }
 
 warp_status() {
-    _print_header "${NORD_CYAN}󰖂${RST}" "WireGuard WARP Status"
+    local f="  ${NORD_BLUE}%s${RST}  %-12s ${NORD_SNOW_1}%s${RST}\n"
+
+    _print_header "󰖂" "WireGuard WARP Status"
 
     if wg show "$TUNNEL" &>/dev/null; then
-        _print_row "󰤨" "Status" "CONNECTED"
+        printf "$f" "󰤨" "Status" "Connected"
 
         local endpoint=$(wg show "$TUNNEL" endpoints 2>/dev/null | awk '{print $2}')
-        [[ -n "$endpoint" ]] && _print_row "󰩟" "Endpoint" "$endpoint"
+        [[ -n "$endpoint" ]] && printf "$f" "󰩟" "Endpoint" "$endpoint"
 
         local raw=$(wg show "$TUNNEL" transfer 2>/dev/null | awk '{print $2, $3}')
         if [[ -n "$raw" ]]; then
             local rx=$(echo "$raw" | awk '{print $1}')
             local tx=$(echo "$raw" | awk '{print $2}')
-            _print_row "󰇚" "Transfer" "$(_fmt_bytes "$rx") rx / $(_fmt_bytes "$tx") tx"
+            printf "$f" "󰇚" "Transfer" "$(_fmt_bytes "$rx") rx / $(_fmt_bytes "$tx") tx"
         fi
     else
-        _print_row "󰤭" "Status" "DISCONNECTED"
+        printf "$f" "󰤭" "Status" "Disconnected"
     fi
 
     if [[ -f "$WARP_CONF" ]]; then
-        _print_row "󰋊" "Config" "$WARP_CONF"
+        printf "$f" "󰋊" "Config" "$WARP_CONF"
     else
-        _print_row "󰅙" "Config" "Not found"
+        printf "$f" "󰅙" "Config" "Not found"
     fi
 
-    _print_footer
+    echo ""
 }
 
 # --- Router ---
@@ -194,12 +180,12 @@ case "$1" in
     rotate) warp_rotate ;;
     status) warp_status ;;
     *)
-        _print_header "${NORD_CYAN}󰖂${RST}" "WireGuard WARP Manager"
-        printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "on"     "Connect tunnel"
-        printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "off"    "Disconnect tunnel"
-        printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "rotate" "Rotate WARP credentials"
-        printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%-8s${RST} ${NORD_SNOW_1}%-40s${RST}\n" "status" "Show tunnel status"
-        _print_footer
+        _print_header "󰖂" "WireGuard WARP Manager"
+        printf "  ${NORD_CYAN}%-8s${RST}${NORD_POLAR_4} 󰁔 ${RST}${NORD_SNOW_1}%s${RST}\n" "on"     "Connect tunnel"
+        printf "  ${NORD_CYAN}%-8s${RST}${NORD_POLAR_4} 󰁔 ${RST}${NORD_SNOW_1}%s${RST}\n" "off"    "Disconnect tunnel"
+        printf "  ${NORD_CYAN}%-8s${RST}${NORD_POLAR_4} 󰁔 ${RST}${NORD_SNOW_1}%s${RST}\n" "rotate" "Rotate WARP credentials"
+        printf "  ${NORD_CYAN}%-8s${RST}${NORD_POLAR_4} 󰁔 ${RST}${NORD_SNOW_1}%s${RST}\n" "status" "Show tunnel status"
+        echo ""
         exit 1
         ;;
 esac

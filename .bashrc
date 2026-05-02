@@ -8,7 +8,7 @@
 [[ $- != *i* ]] && return
 
 export EDITOR='vim'
-export VISUAL='zed'
+export VISUAL='zeditor'
 export MANROFFOPT="-c"
 export PAGER='most'
 export TERM=xterm-256color
@@ -87,43 +87,30 @@ NORD_MAGENTA='\e[38;2;180;142;173m'
 NORD_YELLOW='\e[38;2;235;203;139m'
 RST='\e[0m'
 
-HEADER_LINE="${NORD_POLAR_4}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RST}"
+IDEAPAD_CONSERVATION="/sys/bus/platform/drivers/ideapad_acpi/VPC2004:00/conservation_mode"
+
+# --- UI Helpers ---
 
 _print_header() {
-    echo -e "\n${1}  ${NORD_SNOW_1}${2}${RST}"
-    echo -e "${HEADER_LINE}"
+    echo -e "\n${NORD_CYAN}${1}  ${NORD_SNOW_1}${2}${RST}"
+    echo -e "${NORD_POLAR_4}─────────────────────────────────────────────────────${RST}"
 }
 
-_print_footer() {
-    echo -e "${HEADER_LINE}\n"
+_print_status() {
+    local color=$NORD_BLUE
+    [[ "$1" == "󰄬" ]] && color=$NORD_GREEN
+    [[ "$1" == "󰅙" ]] && color=$NORD_RED
+    [[ "$1" == "󰀦" ]] && color=$NORD_ORANGE
+    echo -e "${color}${1}  ${2}${RST}"
 }
 
-_print_row() {
-    printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}%s${RST} %-12s ${NORD_SNOW_1}%s${RST}\n" "$1" "$2" "$3"
+_info_group() {
+    echo -e "\n ${NORD_YELLOW}${1}  ${2}${RST}"
 }
 
-_pass_thru() {
-    while IFS= read -r line; do
-        printf '\e[38;2;118;138;161m│  %s\e[0m\n' "$line"
-    done
+_info_cmd() {
+    printf "    ${NORD_CYAN}%-14s${RST}${NORD_POLAR_4} 󰁔 ${RST}${NORD_SNOW_1}%s${RST}\n" "$1" "$2"
 }
-
-_run() {
-    local label="$1"; shift
-    local output
-    output=$("$@" 2>&1)
-    if [[ $? -eq 0 ]]; then
-        [[ -n "$output" ]] && echo "$output" | _pass_thru
-        _print_row "󰄬" "$label" "Done"
-    else
-        [[ -n "$output" ]] && echo "$output" | _pass_thru
-        _print_row "󰅙" "$label" "Failed"
-    fi
-}
-
-_info_msg() { printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}[INFO]${RST}  %s\n" "$1"; }
-
-IDEAPAD_CONSERVATION="/sys/bus/platform/drivers/ideapad_acpi/VPC2004:00/conservation_mode"
 
 # ------------------------------------------------------------------------------
 # 3. ALIASES
@@ -135,11 +122,10 @@ alias tree='tree -C'
 alias ll='ls -lhF --color=auto'
 alias lla='ls -alhF --color=auto'
 alias grep='grep --color=auto'
-command -v bat &>/dev/null && alias cat='bat'
 alias clear='clear && sys'
-alias reload='source ~/.bashrc && echo -e "${NORD_GREEN}󰑓  Profile Reloaded!${RST}"'
-rr() { echo -e "${NORD_CYAN}󰮯  Elevating Last Command...${RST}"; sudo $(fc -ln -1); }
-alias conf='[[ -x $(command -v zeditor) ]] && (echo -e "${NORD_CYAN}󱃖  Opening Configs...${RST}" && zeditor ~/arch-config/) || echo -e "${NORD_RED}󰅙  zed not found.${RST}"'
+alias reload='source ~/.bashrc && echo -e "${NORD_GREEN}󰑓  Profile reloaded.${RST}"'
+rr() { echo -e "${NORD_CYAN}󰮯  Elevating last command...${RST}"; sudo $(fc -ln -1); }
+alias conf='[[ -x $(command -v zeditor) ]] && (echo -e "${NORD_CYAN}󱃖  Opening configs...${RST}" && zeditor ~/arch-config/) || echo -e "${NORD_RED}󰅙  zed not found.${RST}"'
 alias age='echo -e "${NORD_BLUE}󰃭  OS Age:${RST} $(( ($(date +%s) - $(stat -c %Y /lost+found 2>/dev/null || stat -c %Y /)) / 86400 )) days"'
 
 # ------------------------------------------------------------------------------
@@ -152,36 +138,37 @@ sys() {
     local uptime=$(uptime -p | sed 's/up //')
     local age=$(( ($(date +%s) - $(stat -c %Y /lost+found 2>/dev/null || stat -c %Y /)) / 86400 ))
 
-    _print_header "${NORD_CYAN}󰣇${RST}" "Arch Linux"
-    _print_row "󱑎" "Uptime" "$uptime"
-    _print_row "󰟾" "Kernel" "$ker"
-    _print_row "󰏖" "Packages" "$total_pkgs"
-    _print_row "󰍛" "Memory" "$mem"
-    _print_row "󰃭" "OS Age" "$age days"
+    local f="  ${NORD_BLUE}%s${RST}  %-12s ${NORD_SNOW_1}%s${RST}\n"
+
+    _print_header "󰣇" "Arch Linux"
+    printf "$f" "󱑎" "Uptime"   "$uptime"
+    printf "$f" "󰟾" "Kernel"   "$ker"
+    printf "$f" "󰏖" "Packages" "$total_pkgs"
+    printf "$f" "󰍛" "Memory"   "$mem"
+    printf "$f" "󰃭" "OS Age"   "$age days"
 
     if [[ -f "$IDEAPAD_CONSERVATION" ]]; then
         local status
         [[ $(< "$IDEAPAD_CONSERVATION") -eq 1 ]] && status="Conservation - ON" || status="Conservation - OFF"
-        _print_row "󱊟" "Battery" "$status"
+        printf "$f" "󱊟" "Battery" "$status"
     fi
-    _print_row "󰒍" "Shell" "Bash ${BASH_VERSION%%(*}"
-    _print_footer
+    printf "$f" "󰒍" "Shell" "Bash ${BASH_VERSION%%(*}"
 
-    echo -e "  ${NORD_YELLOW}󰋼 Run 'info' for custom commands${RST}\n"
+    echo ""
 }
 
 if [[ -f "$IDEAPAD_CONSERVATION" ]]; then
     batt-on() {
         echo 1 | sudo tee "$IDEAPAD_CONSERVATION" > /dev/null
-        _print_header "${NORD_GREEN}󱊟${RST}" "Battery Conservation"
-        _print_row "󰏔" "Status" "ENABLED (80%)"
-        _print_footer
+        _print_header "󱊟" "Battery Conservation"
+        _print_status "󰄬" "Conservation mode enabled (80% limit)"
+        echo ""
     }
     batt-off() {
         echo 0 | sudo tee "$IDEAPAD_CONSERVATION" > /dev/null
-        _print_header "${NORD_RED}󱊟${RST}" "Battery Conservation"
-        _print_row "󰏔" "Status" "DISABLED (100%)"
-        _print_footer
+        _print_header "󱊟" "Battery Conservation"
+        _print_status "󰋼" "Conservation mode disabled (100% limit)"
+        echo ""
     }
 fi
 
@@ -189,17 +176,34 @@ fi
 # 5. PACKAGE MANAGEMENT
 # ------------------------------------------------------------------------------
 cleanup() {
-    _print_header "${NORD_ORANGE}󰃨${RST}" "Cleaning System Cache"
-    _run "Partial downloads" sudo rm -rf /var/cache/pacman/pkg/download-*
-    _run "Bash history temp" rm -f ~/.bash_history-*.tmp
-    _run "Pkg list cache" rm -f ~/.cache/yay-pkg-list.cache
-    _run "Yay cache" yay -Sc --noconfirm
-    _run "Yay orphans" yay -Yc --noconfirm
-    _run "Paccache keep 2" sudo paccache -rk2
-    _run "Paccache uninstalled" sudo paccache -ruk0
-    _run "Yay build cache" rm -rf ~/.cache/yay/*
-    _print_row "󰋊" "Cache Size" "$(du -sh /var/cache/pacman/pkg/ 2>/dev/null | cut -f1)"
-    _print_footer
+    _print_header "󰃨" "Cleaning System Cache"
+
+    sudo rm -rf /var/cache/pacman/pkg/download-*
+    _print_status "$([ $? -eq 0 ] && echo 󰄬 || echo 󰅙)" "Partial downloads"
+
+    rm -f ~/.bash_history-*.tmp
+    _print_status "$([ $? -eq 0 ] && echo 󰄬 || echo 󰅙)" "Bash history temp"
+
+    rm -f ~/.cache/yay-pkg-list.cache
+    _print_status "$([ $? -eq 0 ] && echo 󰄬 || echo 󰅙)" "Pkg list cache"
+
+    yay -Sc --noconfirm
+    _print_status "$([ $? -eq 0 ] && echo 󰄬 || echo 󰅙)" "Yay cache"
+
+    yay -Yc --noconfirm
+    _print_status "$([ $? -eq 0 ] && echo 󰄬 || echo 󰅙)" "Yay orphans"
+
+    sudo paccache -rk2
+    _print_status "$([ $? -eq 0 ] && echo 󰄬 || echo 󰅙)" "Paccache keep 2"
+
+    sudo paccache -ruk0
+    _print_status "$([ $? -eq 0 ] && echo 󰄬 || echo 󰅙)" "Paccache uninstalled"
+
+    rm -rf ~/.cache/yay/*
+    _print_status "$([ $? -eq 0 ] && echo 󰄬 || echo 󰅙)" "Yay build cache"
+
+    _print_status "󰋊" "Cache: $(du -sh /var/cache/pacman/pkg/ 2>/dev/null | cut -f1)"
+    echo ""
 }
 
 cup() {
@@ -213,25 +217,27 @@ cup() {
         local updates=$(echo "$all_updates" | grep -Fwf <(pacman -Sl "$repo" 2>/dev/null | awk '{print $2}'))
         [[ -z "$updates" ]] && continue
         any=true
-        _print_header "${NORD_BLUE}󰏖${RST}" "$repo"
+        _print_header "󰏖" "$repo"
         echo "$updates" | while read -r line; do
             local pkg=$(echo "$line" | awk '{print $1}')
             local ver=$(echo "$line" | awk '{$1=""; print $0}' | xargs)
-            printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}󰚰${RST}  ${NORD_GREEN}%-40s${RST} ${NORD_SNOW_1}%s${RST}\n" "$pkg" "$ver"
+            printf "  ${NORD_GREEN}%-40s${RST} ${NORD_POLAR_4}%s${RST}\n" "$pkg" "$ver"
         done
+        echo ""
     done <<< "$repos"
 
     if [[ -n "$aur_updates" ]]; then
         any=true
-        _print_header "${NORD_MAGENTA}󰏖${RST}" "AUR"
+        _print_header "󰏖" "AUR"
         echo "$aur_updates" | while read -r line; do
             local pkg=$(echo "$line" | awk '{print $1}')
             local ver=$(echo "$line" | awk '{$1=""; print $0}' | xargs)
-            printf "${NORD_POLAR_4}│${RST}  ${NORD_BLUE}󰚰${RST}  ${NORD_GREEN}%-40s${RST} ${NORD_SNOW_1}%s${RST}\n" "$pkg" "$ver"
+            printf "  ${NORD_GREEN}%-40s${RST} ${NORD_SNOW_1}%s${RST}\n" "$pkg" "$ver"
         done
+        echo ""
     fi
 
-    [[ "$any" == false ]] && echo -e "  ${NORD_GREEN}󰄬  All packages up to date${RST}"
+    [[ "$any" == false ]] && _print_status "󰄬" "All packages up to date"
     echo ""
 }
 
@@ -239,12 +245,12 @@ inst() {
     if [[ "$1" == "-refresh" ]]; then
         echo -e "${NORD_D_BLUE}󰒓  Refreshing package cache...${RST}"
         yay -Sl 2>/dev/null | awk '{print $1"/"$2}' > "$HOME/.cache/yay-pkg-list.cache"
-        echo -e "${NORD_GREEN}󰄬  Cache updated.${RST}"
+        _print_status "󰄬" "Cache updated."
         inst
         return 0
     fi
     if [[ $# -gt 0 ]]; then
-        _print_header "${NORD_GREEN}󰏖${RST}" "Installing Packages"
+        _print_header "󰏖" "Installing Packages"
         yay -S "$@"
         history -s "yay -S $*"
         history -a
@@ -275,17 +281,14 @@ inst() {
 
 _pkg_list() {
     local explicit=$(pacman -Qeq)
-
     {
         local repos=$(pacman -Sl 2>/dev/null | awk '{print $1}' | sort -u)
         while read -r repo; do
             pacman -Sl "$repo" 2>/dev/null | grep '\[installed\]' | awk -v r="$repo" '{print r"/"$2}'
         done <<< "$repos"
-
         pacman -Qm | awk '{print "aur/"$1}'
     } | while read -r line; do
         local pkg="${line#*/}"
-
         if echo "$explicit" | grep -qx "$pkg"; then
             echo "  $line"
         else
@@ -296,7 +299,7 @@ _pkg_list() {
 
 uinst() {
     if [[ $# -gt 0 ]]; then
-        _print_header "${NORD_RED}󰆑${RST}" "Uninstalling Packages"
+        _print_header "󰆑" "Uninstalling Packages"
         sudo pacman -Rns "$@"
         history -s "sudo pacman -Rns $*"
         history -a
@@ -319,22 +322,32 @@ uinst() {
 # 6. NETWORK & CONNECTIVITY
 # ------------------------------------------------------------------------------
 cdns-on() {
-    _print_header "${NORD_CYAN}󰛳${RST}" "DNS Status"
-    _run "Restore config" sudo cp /etc/systemd/resolved.conf.bak /etc/systemd/resolved.conf
-    _run "Restart resolved" sudo systemctl restart systemd-resolved
-    _print_row "󰈀" "Custom DNS" "ENABLED"
-    _print_row "󰒄" "Provider" "NextDNS"
-    _print_footer
+    _print_header "󰛳" "DNS Status"
+
+    sudo cp /etc/systemd/resolved.conf.bak /etc/systemd/resolved.conf
+    _print_status "$([ $? -eq 0 ] && echo 󰄬 || echo 󰅙)" "Config restored"
+
+    sudo systemctl restart systemd-resolved
+    _print_status "$([ $? -eq 0 ] && echo 󰄬 || echo 󰅙)" "systemd-resolved restarted"
+
+    _print_status "󰄬" "Custom DNS enabled — NextDNS"
+    echo ""
 }
 
 cdns-off() {
-    _print_header "${NORD_RED}󰛳${RST}" "DNS Status"
-    _run "Backup config" sudo cp /etc/systemd/resolved.conf /etc/systemd/resolved.conf.bak
-    _run "Clear config" sudo truncate -s 0 /etc/systemd/resolved.conf
-    _run "Restart resolved" sudo systemctl restart systemd-resolved
-    _print_row "󰈀" "Custom DNS" "DISABLED"
-    _print_row "󰒄" "Provider" "ISP Default"
-    _print_footer
+    _print_header "󰛳" "DNS Status"
+
+    sudo cp /etc/systemd/resolved.conf /etc/systemd/resolved.conf.bak
+    _print_status "$([ $? -eq 0 ] && echo 󰄬 || echo 󰅙)" "Config backed up"
+
+    sudo truncate -s 0 /etc/systemd/resolved.conf
+    _print_status "$([ $? -eq 0 ] && echo 󰄬 || echo 󰅙)" "Config cleared"
+
+    sudo systemctl restart systemd-resolved
+    _print_status "$([ $? -eq 0 ] && echo 󰄬 || echo 󰅙)" "systemd-resolved restarted"
+
+    _print_status "󰋼" "Custom DNS disabled — ISP default"
+    echo ""
 }
 
 upf() {
@@ -342,42 +355,46 @@ upf() {
     local FF_DIR="$HOME/.config/mozilla/firefox"
     local TEMP_FILE="/tmp/betterfox_user.js"
     local OVERRIDES="$HOME/arch-config/.config/firefox/overrides.js"
-    _print_header "${NORD_ORANGE}󰈹${RST}" "Firefox Tweaks"
+
+    _print_header "󰈹" "Firefox Tweaks"
+
     if ! curl -fsSL "$URL" -o "$TEMP_FILE" &>/dev/null; then
-        _print_row "󰅙" "Error" "Download Failed"
-        _print_footer; return 1
+        _print_status "󰅙" "Download failed"
+        echo ""; return 1
     fi
-    _print_row "󰄬" "Download" "Betterfox fetched"
+    _print_status "󰄬" "Betterfox fetched"
+
     if [[ -f "$OVERRIDES" ]]; then
         cat "$OVERRIDES" >> "$TEMP_FILE"
-        _print_row "󰄬" "Overrides" "Applied from overrides.js"
+        _print_status "󰄬" "Overrides applied"
     else
-        _print_row "󰀦" "Overrides" "No overrides file found, skipping"
+        _print_status "󰀦" "No overrides file found, skipping"
     fi
+
     local found=false
     while IFS= read -r times_file; do
         local profile_path=$(dirname "$times_file")
         cp "$TEMP_FILE" "$profile_path/user.js"
-        _print_row "󰄬" "Applied" "$(basename "$profile_path")"
+        _print_status "󰄬" "$(basename "$profile_path")"
         found=true
     done < <(find "$FF_DIR" -maxdepth 2 -mindepth 2 -name "times.json")
+
     rm "$TEMP_FILE"
-    [[ "$found" = false ]] && _print_row "󰅙" "Error" "No Profiles Found"
-    _print_footer
+    [[ "$found" = false ]] && _print_status "󰅙" "No profiles found"
+    echo ""
 }
 
 upc() {
-    _print_header "${NORD_CYAN}󰚰${RST}" "Config Update"
-    git -C "$HOME/arch-config" pull --rebase --autostash 2>&1 | _pass_thru
-    local exit_code=${PIPESTATUS[0]}
-    if [[ $exit_code -eq 0 ]]; then
-        _print_row "󰊢" "Status" "Configs up to date!"
-        _print_footer
+    _print_header "󰚰" "Config Update"
+    git -C "$HOME/arch-config" pull --rebase --autostash
+    if [[ $? -eq 0 ]]; then
+        _print_status "󰄬" "Configs up to date"
+        echo ""
         echo -e "${NORD_GREEN}󰑓  Sourcing updated profile...${RST}"
         source ~/.bashrc
     else
-        _print_row "󰅙" "Status" "Update Failed"
-        _print_footer
+        _print_status "󰅙" "Update failed"
+        echo ""
         return 1
     fi
 }
@@ -394,7 +411,7 @@ upp() {
     local label=$(echo "$choice" | xargs)
     echo ""
 
-    _print_header "${NORD_CYAN}󰑮${RST}" "Upgrading | $label"
+    _print_header "󰑮" "Upgrading — $label"
     case "$label" in
         All) yay -Syu --noconfirm ;;
         AUR) yay -Sua --noconfirm ;;
@@ -403,20 +420,21 @@ upp() {
             local repo_pkgs=$(pacman -Sl "$label" 2>/dev/null | awk '{print $2}')
             local to_upgrade=$(checkupdates 2>/dev/null | awk '{print $1}' | grep -Fwf <(echo "$repo_pkgs"))
             if [[ -z "$to_upgrade" ]]; then
-                _print_row "󰄬" "Status" "up to date"
+                _print_status "󰄬" "Up to date"
             else
                 sudo pacman -S --noconfirm $to_upgrade
             fi
             ;;
     esac
-    _print_footer
+    echo ""
 }
 
 up-mirrors() {
-    _print_header "${NORD_BLUE}󰈀${RST}" "Updating Mirrors"
+    _print_header "󰈀" "Updating Mirrors"
     sudo reflector --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist
     sudo pacman -Syyu
-    _print_footer
+    _print_status "$([ $? -eq 0 ] && echo 󰄬 || echo 󰅙)" "Mirrors updated"
+    echo ""
 }
 
 # ------------------------------------------------------------------------------
@@ -443,11 +461,10 @@ sz() {
         echo -e "${NORD_RED}󱞣  Not found: $target${RST}"
         return 1
     fi
-    local size=$(du -sh --apparent-size "$target" 2>/dev/null | cut -f1)
-    _print_header "${NORD_CYAN}󰋊${RST}" "Size"
-    _print_row "󰉋" "Path" "$target"
-    _print_row "󰋊" "Size" "$size"
-    _print_footer
+    local size=$(du -sh "$target" 2>/dev/null | cut -f1)
+    _print_header "󰋊" "Size"
+    _print_status "󰉋" "$target  →  $size"
+    echo ""
 }
 
 cd() { if [[ "$1" == "--silent" ]]; then builtin cd "$2"; else builtin cd "$@" && ls -a --color=auto; fi; }
@@ -475,104 +492,87 @@ ff() {
 wp() {
     local WALLPAPERS_DIR="$HOME/Pictures/config-wallpapers"
     if [[ ! -d "$WALLPAPERS_DIR" ]]; then
-        _print_header "${NORD_RED}󰋊${RST}" "Wallpapers"
-        _print_row "󰅙" "Error" "Wallpapers directory not found"
-        _print_footer; return 1
+        _print_header "󰹧" "Wallpaper Sync"
+        _print_status "󰅙" "Wallpapers directory not found"
+        echo ""; return 1
     fi
-    _print_header "${NORD_CYAN}󰋊${RST}" "Wallpapers"
+
+    _print_header "󰹧" "Wallpaper Sync"
 
     local changes=$(git -C "$WALLPAPERS_DIR" status --porcelain 2>/dev/null)
     if [[ -n "$changes" ]]; then
-        _print_row "󰊢" "Local" "Uncommitted changes found"
-        git -C "$WALLPAPERS_DIR" add -A 2>&1 | _pass_thru
-        git -C "$WALLPAPERS_DIR" commit -m "sync: local wallpaper changes" 2>&1 | _pass_thru
-        if [[ ${PIPESTATUS[0]} -eq 0 ]]; then
-            _print_row "󰄬" "Commit" "Changes committed"
-        else
-            _print_row "󰅙" "Commit" "Failed to commit"
-        fi
+        _print_status "󰊢" "Local changes detected"
+        git -C "$WALLPAPERS_DIR" add -A
+        git -C "$WALLPAPERS_DIR" commit -m "sync: local wallpaper changes"
+        _print_status "$([ $? -eq 0 ] && echo 󰄬 || echo 󰅙)" "Committed"
     fi
 
-    git -C "$WALLPAPERS_DIR" pull --rebase --autostash 2>&1 | _pass_thru
-    if [[ ${PIPESTATUS[0]} -eq 0 ]]; then
-        _print_row "󰄬" "Pull" "Up to date"
-    else
-        _print_row "󰅙" "Pull" "Pull failed"
-    fi
+    git -C "$WALLPAPERS_DIR" pull --rebase --autostash
+    _print_status "$([ $? -eq 0 ] && echo 󰄬 || echo 󰅙)" "Pull up to date"
 
-    git -C "$WALLPAPERS_DIR" push 2>&1 | _pass_thru
-    if [[ ${PIPESTATUS[0]} -eq 0 ]]; then
-        _print_row "󰄬" "Push" "Synced to GitHub"
-    else
-        _print_row "󰅙" "Push" "Nothing to push or push failed"
-    fi
+    git -C "$WALLPAPERS_DIR" push
+    _print_status "$([ $? -eq 0 ] && echo 󰄬 || echo 󰅙)" "Remote updated"
 
-    _print_footer
+    echo ""
 }
 
 # ------------------------------------------------------------------------------
 # 8. MISCELLANEOUS & HELP
 # ------------------------------------------------------------------------------
 info() {
-    _print_header "${NORD_CYAN}󱈄${RST}" "Custom Shell Commands"
+    _print_header "󱈄" "Shell Environment Toolkit"
 
-    printf "${NORD_POLAR_4}󰣇  System${RST}\n"
-    printf "  ${NORD_BLUE}%-14s${RST} ${NORD_SNOW_1}%s${RST}\n" "sys"         "Show system info (uptime, kernel, memory, packages)"
-    printf "  ${NORD_BLUE}%-14s${RST} ${NORD_SNOW_1}%s${RST}\n" "age"         "Show OS installation age in days"
-    printf "  ${NORD_BLUE}%-14s${RST} ${NORD_SNOW_1}%s${RST}\n" "reload"      "Re-source ~/.bashrc"
-    printf "  ${NORD_BLUE}%-14s${RST} ${NORD_SNOW_1}%s${RST}\n" "conf"        "Open arch-config in Zed"
-    printf "  ${NORD_BLUE}%-14s${RST} ${NORD_SNOW_1}%s${RST}\n" "rr"          "Re-run last command with sudo"
-    echo ""
+    _info_group "󰣇" "System"
+    _info_cmd "sys"         "Show system info (uptime, kernel, memory, packages)"
+    _info_cmd "age"         "Show OS installation age in days"
+    _info_cmd "reload"      "Re-source ~/.bashrc"
+    _info_cmd "conf"        "Open arch-config in Zed"
+    _info_cmd "rr"          "Re-run last command with sudo"
 
-    printf "${NORD_POLAR_4}󰏖  Packages${RST}\n"
-    printf "  ${NORD_BLUE}%-14s${RST} ${NORD_SNOW_1}%s${RST}\n" "inst"        "Install packages (fzf picker or direct name)"
-    printf "  ${NORD_BLUE}%-14s${RST} ${NORD_SNOW_1}%s${RST}\n" "uinst"       "Uninstall packages (fzf picker or direct name)"
-    printf "  ${NORD_BLUE}%-14s${RST} ${NORD_SNOW_1}%s${RST}\n" "upp"         "Upgrade packages (fzf: All / per repo)"
-    printf "  ${NORD_BLUE}%-14s${RST} ${NORD_SNOW_1}%s${RST}\n" "cup"         "Check available updates across all repos"
-    printf "  ${NORD_BLUE}%-14s${RST} ${NORD_SNOW_1}%s${RST}\n" "cleanup"     "Clear package caches and orphaned build files"
-    printf "  ${NORD_BLUE}%-14s${RST} ${NORD_SNOW_1}%s${RST}\n" "up-mirrors"  "Refresh mirrorlist with reflector and sync"
-    echo ""
+    _info_group "󰏖" "Packages"
+    _info_cmd "inst"        "Install packages (fzf picker or direct name)"
+    _info_cmd "uinst"       "Uninstall packages (fzf picker or direct name)"
+    _info_cmd "upp"         "Upgrade packages (fzf: All / per repo)"
+    _info_cmd "cup"         "Check available updates across all repos"
+    _info_cmd "cleanup"     "Clear package caches and orphaned build files"
+    _info_cmd "up-mirrors"  "Refresh mirrorlist with reflector and sync"
 
-    printf "${NORD_POLAR_4}󰚰  Updates${RST}\n"
-    printf "  ${NORD_BLUE}%-14s${RST} ${NORD_SNOW_1}%s${RST}\n" "upall"       "Full update: packages + Firefox + wallpapers + configs"
-    printf "  ${NORD_BLUE}%-14s${RST} ${NORD_SNOW_1}%s${RST}\n" "upc"         "Pull latest arch-config from GitHub and reload"
-    printf "  ${NORD_BLUE}%-14s${RST} ${NORD_SNOW_1}%s${RST}\n" "upf"         "Fetch Betterfox user.js and apply to Firefox profiles"
-    printf "  ${NORD_BLUE}%-14s${RST} ${NORD_SNOW_1}%s${RST}\n" "wp"          "Sync wallpapers repo (commit, pull, push)"
-    echo ""
+    _info_group "󰚰" "Updates"
+    _info_cmd "upall"       "Full update: packages + Firefox + wallpapers + configs"
+    _info_cmd "upc"         "Pull latest arch-config from GitHub and reload"
+    _info_cmd "upf"         "Fetch Betterfox user.js and apply to Firefox profiles"
+    _info_cmd "wp"          "Sync wallpapers repo (commit, pull, push)"
 
     if [[ -f "$IDEAPAD_CONSERVATION" ]]; then
-        printf "${NORD_POLAR_4}󱊟  Battery${RST}\n"
-        printf "  ${NORD_BLUE}%-14s${RST} ${NORD_SNOW_1}%s${RST}\n" "batt-on"     "Enable conservation mode (charge limit 80%)"
-        printf "  ${NORD_BLUE}%-14s${RST} ${NORD_SNOW_1}%s${RST}\n" "batt-off"    "Disable conservation mode (charge to 100%)"
-        echo ""
+        _info_group "󱊟" "Battery"
+        _info_cmd "batt-on"     "Enable conservation mode (charge limit 80%)"
+        _info_cmd "batt-off"    "Disable conservation mode (charge to 100%)"
     fi
 
-    printf "${NORD_POLAR_4}󰛳  Network${RST}\n"
-    printf "  ${NORD_BLUE}%-14s${RST} ${NORD_SNOW_1}%s${RST}\n" "cdns-on"     "Enable custom DNS (NextDNS via systemd-resolved)"
-    printf "  ${NORD_BLUE}%-14s${RST} ${NORD_SNOW_1}%s${RST}\n" "cdns-off"    "Disable custom DNS, restore ISP default"
-    printf "  ${NORD_BLUE}%-14s${RST} ${NORD_SNOW_1}%s${RST}\n" "wg-socks"    "Manage WireGuard SOCKS5 proxy"
-    echo ""
+    _info_group "󰛳" "Network"
+    _info_cmd "cdns-on"     "Enable custom DNS (NextDNS via systemd-resolved)"
+    _info_cmd "cdns-off"    "Disable custom DNS, restore ISP default"
+    _info_cmd "wg-socks"    "Manage WireGuard SOCKS5 proxy"
 
-    printf "${NORD_POLAR_4}󰓇  Files${RST}\n"
-    printf "  ${NORD_BLUE}%-14s${RST} ${NORD_SNOW_1}%s${RST}\n" "exp [path]"  "Open path in file manager (defaults to .)"
-    printf "  ${NORD_BLUE}%-14s${RST} ${NORD_SNOW_1}%s${RST}\n" "open [path]" "Open file/URL with default app"
-    printf "  ${NORD_BLUE}%-14s${RST} ${NORD_SNOW_1}%s${RST}\n" "ff [path]"   "fzf file finder, copies selection to clipboard"
-    printf "  ${NORD_BLUE}%-14s${RST} ${NORD_SNOW_1}%s${RST}\n" "sz [path]"   "Show size of file or directory"
-    echo ""
+    _info_group "󰓇" "Files"
+    _info_cmd "exp [path]"  "Open path in file manager (defaults to .)"
+    _info_cmd "open [path]" "Open file/URL with default app"
+    _info_cmd "ff [path]"   "fzf file finder, copies selection to clipboard"
+    _info_cmd "sz [path]"   "Show size of file or directory"
 
-    printf "${NORD_POLAR_4}󰉋  Navigation${RST}\n"
-    printf "  ${NORD_BLUE}%-14s${RST} ${NORD_SNOW_1}%s${RST}\n" "z [query]"   "Jump to frecent directory (zoxide) + auto-ls"
-    printf "  ${NORD_BLUE}%-14s${RST} ${NORD_SNOW_1}%s${RST}\n" "ll"          "Long list with human-readable sizes"
-    printf "  ${NORD_BLUE}%-14s${RST} ${NORD_SNOW_1}%s${RST}\n" "la"          "List all including hidden files"
-    printf "  ${NORD_BLUE}%-14s${RST} ${NORD_SNOW_1}%s${RST}\n" "lla"         "Long list all including hidden files"
-    echo ""
+    _info_group "󰉋" "Navigation"
+    _info_cmd "z [query]"   "Jump to frecent directory (zoxide) + auto-ls"
+    _info_cmd "ll"          "Long list with human-readable sizes"
+    _info_cmd "la"          "List all including hidden files"
+    _info_cmd "lla"         "Long list all including hidden files"
+    _info_cmd "bat"         "better cat with syntax highlighting"
 
-    printf "${NORD_POLAR_4}󰌌  Keybinds${RST}\n"
-    printf "  ${NORD_BLUE}%-14s${RST} ${NORD_SNOW_1}%s${RST}\n" "Ctrl+H"      "fzf history picker (Ctrl+D to delete entry)"
-    echo ""
+    _info_group "󰌌" "Keybinds"
+    _info_cmd "Ctrl+H"      "fzf history picker (Ctrl+D to delete entry)"
 
-    _print_footer
+    echo ""
 }
 
 # Run system info on startup
 sys
+echo -e "${NORD_YELLOW}󰋼  Type 'info' to see custom utilities${RST}\n"
