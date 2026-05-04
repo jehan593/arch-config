@@ -7,7 +7,7 @@
 # ------------------------------------------------------------------------------
 [[ $- != *i* ]] && return
 
-export EDITOR='vim'
+export EDITOR='nvim'
 export VISUAL='zeditor'
 export MANROFFOPT="-c"
 export PAGER='most'
@@ -221,7 +221,7 @@ cup() {
         echo "$updates" | while read -r line; do
             local pkg=$(echo "$line" | awk '{print $1}')
             local ver=$(echo "$line" | awk '{$1=""; print $0}' | xargs)
-            printf "  ${NORD_GREEN}%-40s${RST} ${NORD_POLAR_4}%s${RST}\n" "$pkg" "$ver"
+            printf "  ${NORD_GREEN}%-40s${RST} ${NORD_SNOW_1}%s${RST}\n" "$pkg" "$ver"
         done
         echo ""
     done <<< "$repos"
@@ -565,7 +565,6 @@ info() {
     _info_cmd "ll"          "Long list with human-readable sizes"
     _info_cmd "la"          "List all including hidden files"
     _info_cmd "lla"         "Long list all including hidden files"
-    _info_cmd "bat"         "better cat with syntax highlighting"
 
     _info_group "󰌌" "Keybinds"
     _info_cmd "Ctrl+H"      "fzf history picker (Ctrl+D to delete entry)"

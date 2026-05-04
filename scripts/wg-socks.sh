@@ -22,7 +22,7 @@ REAL_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6)
 
 # Elevation check
 if [ "$EUID" -ne 0 ]; then
-    echo -e "\n${NORD_CYAN}󰌋  Elevating with gsudo...${RST}"
+    echo -e "\n${NORD_CYAN}󰌋  Elevating with sudo...${RST}"
     exec sudo bash "$(realpath "$0")" "$@"
 fi
 

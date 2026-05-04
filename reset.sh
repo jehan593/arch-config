@@ -56,7 +56,7 @@ echo ""
 # ==============================================================================
 _print_header "󰆑" "Removing Symlinks"
 
-for file in .bashrc .vimrc; do
+for file in .bashrc; do
     if [[ -L "$HOME/$file" ]]; then
         rm "$HOME/$file"
         ok "Removed symlink: ~/$file"
@@ -111,17 +111,20 @@ fi
 echo ""
 
 # ==============================================================================
-# 3. REMOVE NORD VIM THEME
+# 3. REMOVE NEOVIM SYMLINK
 # ==============================================================================
-_print_header "󰄮" "Nord Vim Theme"
+_print_header "󰕮" "Neovim Configuration"
 
-if [[ -f "$HOME/.vim/colors/nord.vim" ]]; then
-    rm "$HOME/.vim/colors/nord.vim"
-    ok "Removed Nord vim theme."
+NVIM_INIT="$HOME/.config/nvim/init.lua"
+if [[ -L "$NVIM_INIT" ]]; then
+    rm "$NVIM_INIT"
+    ok "Removed symlink: ~/.config/nvim/init.lua"
 else
-    info "Nord vim theme not found, skipping."
+    info "Not a symlink, skipping: ~/.config/nvim/init.lua"
 fi
 echo ""
+
+
 
 # ==============================================================================
 # 4. REMOVE SUDOERS RULE
@@ -299,14 +302,14 @@ echo ""
 # ==============================================================================
 _print_header "󰏖" "Optional: Package Removal"
 
-info "Targets: wireproxy wgcf wireguard-tools bat plocate gvim starship"
-info "         fzf zoxide mpv wl-clipboard xclip reflector pacman-contrib expac"
+info "Targets: wireproxy wgcf wireguard-tools plocate neovim starship"
+info "         fzf zoxide mpv xclip reflector pacman-contrib expac"
 read -p "$(echo -e "${NORD_ORANGE}Remove these packages? [y/N]: ${RST}")" remove_pkgs
 
 if [[ "$remove_pkgs" =~ ^[Yy]$ ]]; then
     yay -Rns --noconfirm \
-        wireproxy wgcf wireguard-tools bat plocate gvim starship \
-        fzf zoxide mpv wl-clipboard xclip reflector pacman-contrib expac
+        wireproxy wgcf wireguard-tools plocate neovim starship \
+        fzf zoxide mpv xclip reflector pacman-contrib expac
     _print_status "$([ $? -eq 0 ] && echo 󰄬 || echo 󰅙)" "Packages removed"
 else
     info "Skipping package removal."

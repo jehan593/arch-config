@@ -20,10 +20,11 @@ REAL_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6)
 WARP_CONF="$REAL_HOME/.config/warp/warp.conf"
 WARP_DIR="$REAL_HOME/.config/warp"
 TUNNEL="warp"
+WARP_STATUS="$REAL_HOME/.config/warp/warp_status"
 
 # Elevation check
 if [ "$EUID" -ne 0 ]; then
-    echo -e "\n${NORD_CYAN}󰌋  Elevating with gsudo...${RST}"
+    echo -e "\n${NORD_CYAN}󰌋  Elevating with sudo...${RST}"
     exec sudo bash "$(realpath "$0")" "$@"
 fi
 
@@ -51,6 +52,31 @@ _fmt_bytes() {
     }'
 }
 
+_ensure_service() {
+    if [[ ! -f /etc/systemd/system/warp.service ]]; then
+        local script_path
+        script_path="$(realpath "$0")"
+        cat > /etc/systemd/system/warp.service <<EOF
+[Unit]
+Description=WireGuard WARP tunnel
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/bash -c 'test -f $WARP_STATUS && $script_path on || true'
+ExecStop=$script_path off
+
+[Install]
+WantedBy=multi-user.target
+EOF
+        systemctl daemon-reload
+        systemctl enable warp &>/dev/null
+        _print_status "󰄬" "Boot service created and enabled"
+    fi
+}
+
 # --- Actions ---
 
 warp_on() {
@@ -62,6 +88,8 @@ warp_on() {
     wg-quick up "$WARP_CONF"
     if [[ $? -eq 0 ]]; then
         _print_status "󰤨" "Connected"
+        echo "󰅟" > "$WARP_STATUS"
+        _ensure_service
     else
         _print_status "󰅙" "Failed to connect"
     fi
@@ -73,6 +101,7 @@ warp_off() {
     wg-quick down "$WARP_CONF"
     if [[ $? -eq 0 ]]; then
         _print_status "󰤭" "Disconnected"
+        rm -f "$WARP_STATUS"
     else
         _print_status "󰅙" "Failed to disconnect"
     fi
@@ -168,6 +197,12 @@ warp_status() {
         printf "$f" "󰋊" "Config" "$WARP_CONF"
     else
         printf "$f" "󰅙" "Config" "Not found"
+    fi
+
+    if [[ -f "$WARP_STATUS" ]]; then
+        printf "$f" "󰒓" "Persist" "Will reconnect on boot"
+    else
+        printf "$f" "󰒓" "Persist" "Will not reconnect on boot"
     fi
 
     echo ""

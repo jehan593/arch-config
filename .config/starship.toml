@@ -8,6 +8,7 @@ $directory\
 [](fg:#4c566a bg:#3b4252)\
 $git_branch\
 $git_status\
+${custom.warp}\
 [](fg:#3b4252 bg:#2e3440)\
 $nodejs\
 $rust\
@@ -68,3 +69,11 @@ format = '[[  $time ](fg:#81a1c1 bg:#242933)]($style)'
 [character]
 success_symbol = "[➜](bold #88c0d0)"
 error_symbol = "[➜](bold #bf616a)"
+
+[custom.warp]
+command = 'cat ~/.config/warp/warp_status'
+when = 'test -s ~/.config/warp/warp_status'
+shell = "bash"
+style = "bg:#3b4252"
+format = '[[ $output ](fg:#d08770 bg:#3b4252)]($style)'
+description = "WARP status"

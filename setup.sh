@@ -98,20 +98,11 @@ echo ""
 # ==============================================================================
 _print_header "󰏖" "Installing Dependencies"
 
-if pacman -Qq vim &>/dev/null && ! pacman -Qq gvim &>/dev/null; then
-    info "Replacing vim with gvim for clipboard support..."
-    if sudo pacman -Rdd --noconfirm vim; then
-        ok "vim removed."
-    else
-        err "Failed to remove vim — continuing anyway."
-    fi
-fi
-
 DEPENDENCIES=(
     "wireproxy" "wgcf" "wireguard-tools"
-    "bat" "plocate" "curl" "gvim"
+    "plocate" "curl" 
     "starship" "fzf" "zoxide"
-    "mpv" "wl-clipboard" "xclip"
+    "mpv" "xclip" "neovim"
     "reflector" "pacman-contrib" "git" "expac" "qview"
 )
 
@@ -134,9 +125,6 @@ mkdir -p "$HOME/.config"
 ln -sf "$DOTDIR/.bashrc" "$HOME/.bashrc"
 ok "Linked .bashrc → ~/.bashrc"
 
-ln -sf "$DOTDIR/.vimrc" "$HOME/.vimrc"
-ok "Linked .vimrc → ~/.vimrc"
-
 for file in "$DOTDIR/.config/"*; do
     [[ -f "$file" ]] || continue
     ln -sf "$file" "$HOME/.config/$(basename "$file")"
@@ -152,23 +140,6 @@ for item in "$DOTDIR/.config/"*/; do
         ok "Linked .config/$dir/$(basename "$file")"
     done
 done
-
-mkdir -p "$HOME/.vim/colors"
-if [[ ! -f "$HOME/.vim/colors/nord.vim" ]]; then
-    info "Downloading Nord vim theme..."
-    curl -fsSL -o "$HOME/.vim/colors/nord.vim" \
-        https://raw.githubusercontent.com/nordtheme/vim/main/colors/nord.vim \
-        && ok "Nord vim theme downloaded." \
-        || err "Failed to download Nord vim theme."
-else
-    ok "Nord vim theme already exists."
-fi
-
-info "Configuring bat theme..."
-mkdir -p "$HOME/.config/bat"
-echo '--theme="Nord"' > "$HOME/.config/bat/config"
-ok "bat configured with Nord theme."
-echo ""
 
 # ==============================================================================
 # 5. PASSWORDLESS UPDATEDB
@@ -309,6 +280,28 @@ if git clone https://github.com/Adapta-Projects/Papirus-Nord "$PAPIRUS_NORD_DIR"
     rm -rf "$PAPIRUS_NORD_DIR"
 else
     err "Failed to clone Papirus-Nord repo."
+fi
+echo ""
+
+# ==============================================================================
+# 12. NEOVIM CONFIGURATION
+# ==============================================================================
+_print_header "󰕮" "Neovim Configuration"
+
+NVIM_CONFIG_DIR="$HOME/.config/nvim"
+REPO_INIT_LUA="$DOTDIR/.config/nvim/init.lua"
+INIT_TARGET="$NVIM_CONFIG_DIR/init.lua"
+
+if [[ ! -f "$REPO_INIT_LUA" ]]; then
+    info ".config/nvim/init.lua not found in repo — skipping."
+else
+    mkdir -p "$NVIM_CONFIG_DIR"
+    if [[ -L "$INIT_TARGET" && "$(readlink "$INIT_TARGET")" == "$REPO_INIT_LUA" ]]; then
+        ok "Already linked: ~/.config/nvim/init.lua"
+    else
+        ln -sf "$REPO_INIT_LUA" "$INIT_TARGET"
+        ok "Linked: ~/.config/nvim/init.lua"
+    fi
 fi
 echo ""
 
