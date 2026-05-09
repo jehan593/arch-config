@@ -211,20 +211,34 @@ cup() {
     local any=false
     local all_updates=$(checkupdates 2>/dev/null)
     local aur_updates=$(yay -Qua 2>/dev/null)
-    local repos=$(pacman -Sl 2>/dev/null | awk '{print $1}' | sort -u)
 
-    while IFS= read -r repo; do
-        local updates=$(echo "$all_updates" | grep -Fwf <(pacman -Sl "$repo" 2>/dev/null | awk '{print $2}'))
-        [[ -z "$updates" ]] && continue
-        any=true
-        _print_header "󰏖" "$repo"
-        echo "$updates" | while read -r line; do
+    if [[ -n "$all_updates" ]]; then
+        local pkgs=($(echo "$all_updates" | awk '{print $1}'))
+        declare -A pkg_repo
+        while read -r repo pkg; do
+            pkg_repo["$pkg"]="$repo"
+        done < <(pacman -Sp --print-format '%r %n' "${pkgs[@]}" 2>/dev/null)
+
+        declare -A repo_updates
+        while IFS= read -r line; do
             local pkg=$(echo "$line" | awk '{print $1}')
-            local ver=$(echo "$line" | awk '{$1=""; print $0}' | xargs)
-            printf "  ${NORD_GREEN}%-40s${RST} ${NORD_SNOW_1}%s${RST}\n" "$pkg" "$ver"
+            local repo="${pkg_repo[$pkg]}"
+            [[ -z "$repo" ]] && continue
+            repo_updates["$repo"]+="$line"$'\n'
+        done <<< "$all_updates"
+
+        for repo in $(echo "${!repo_updates[@]}" | tr ' ' '\n' | sort); do
+            any=true
+            _print_header "󰏖" "$repo"
+            while IFS= read -r line; do
+                [[ -z "$line" ]] && continue
+                local pkg=$(echo "$line" | awk '{print $1}')
+                local ver=$(echo "$line" | awk '{$1=""; print $0}' | xargs)
+                printf "  ${NORD_GREEN}%-40s${RST} ${NORD_SNOW_1}%s${RST}\n" "$pkg" "$ver"
+            done <<< "${repo_updates[$repo]}"
+            echo ""
         done
-        echo ""
-    done <<< "$repos"
+    fi
 
     if [[ -n "$aur_updates" ]]; then
         any=true
