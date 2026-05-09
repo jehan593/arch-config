@@ -124,7 +124,12 @@ alias lla='ls -alhF --color=auto'
 alias grep='grep --color=auto'
 alias clear='clear && sys'
 alias reload='source ~/.bashrc && echo -e "${NORD_GREEN}󰑓  Profile reloaded.${RST}"'
-rr() { echo -e "${NORD_CYAN}󰮯  Elevating last command...${RST}"; sudo $(fc -ln -1); }
+rr() {
+    local cmd
+    cmd=$(HISTTIMEFORMAT='' history 2 | head -1 | sed 's/^[[:space:]]*[0-9]*[[:space:]]*//')
+    echo -e "${NORD_CYAN}󰮯  Elevating: ${NORD_YELLOW}$cmd${RST}"
+    sudo bash -c "$cmd"
+}
 alias conf='[[ -x $(command -v zeditor) ]] && (echo -e "${NORD_CYAN}󱃖  Opening configs...${RST}" && zeditor ~/arch-config/) || echo -e "${NORD_RED}󰅙  zed not found.${RST}"'
 alias age='echo -e "${NORD_BLUE}󰃭  OS Age:${RST} $(( ($(date +%s) - $(stat -c %Y /lost+found 2>/dev/null || stat -c %Y /)) / 86400 )) days"'
 
