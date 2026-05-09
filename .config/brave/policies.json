@@ -14,6 +14,5 @@
   "ShoppingListEnabled": false,
   "MetricsReportingEnabled": false,
   "SafeBrowsingExtendedReportingEnabled": false,
-  "UrlKeyedAnonymizedDataCollectionEnabled": false,
-  "IPFSEnabled": false
+  "UrlKeyedAnonymizedDataCollectionEnabled": false
 }
