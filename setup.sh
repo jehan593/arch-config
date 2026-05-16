@@ -306,6 +306,20 @@ fi
 echo ""
 
 # ==============================================================================
+# 13. TIMER SCRIPT
+# ==============================================================================
+_print_header "󰔛" "Timer Script"
+
+if [[ -f "$DOTDIR/scripts/timer.sh" ]]; then
+    chmod +x "$DOTDIR/scripts/timer.sh"
+    sudo ln -sf "$DOTDIR/scripts/timer.sh" "/usr/local/bin/timer"
+    ok "timer linked to /usr/local/bin/timer"
+else
+    info "timer.sh not found in $DOTDIR/scripts/"
+fi
+echo ""
+
+# ==============================================================================
 # DONE
 # ==============================================================================
 _print_status "󰄬" "Setup complete! Please restart your shell."

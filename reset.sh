@@ -317,6 +317,19 @@ fi
 echo ""
 
 # ==============================================================================
+# 13. REMOVE TIMER
+# ==============================================================================
+_print_header "󰔛" "Timer Script"
+
+if [[ -L "/usr/local/bin/timer" ]]; then
+    sudo rm -f "/usr/local/bin/timer"
+    ok "Removed timer from /usr/local/bin."
+else
+    info "timer symlink not found, skipping."
+fi
+echo ""
+
+# ==============================================================================
 # DONE
 # ==============================================================================
 _print_status "󰄬" "Reset complete! Please open a new terminal session."

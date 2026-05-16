@@ -588,6 +588,9 @@ info() {
     _info_group "󰌌" "Keybinds"
     _info_cmd "Ctrl+H"      "fzf history picker (Ctrl+D to delete entry)"
 
+    _info_group "" "Utilities"
+    _info_cmd "timer [timer]" "Start a timer for the specified time"
+
     echo ""
 }
 
