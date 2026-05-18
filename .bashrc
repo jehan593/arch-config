@@ -372,8 +372,8 @@ cdns-off() {
 upf() {
     local URL="https://raw.githubusercontent.com/yokoffing/Betterfox/main/user.js"
     local FF_DIR="$HOME/.config/mozilla/firefox"
+    local REMOVALS="$HOME/arch-config/.config/firefox/user-removals.txt"
     local TEMP_FILE="/tmp/betterfox_user.js"
-    local OVERRIDES="$HOME/arch-config/.config/firefox/overrides.js"
 
     _print_header "󰈹" "Firefox Tweaks"
 
@@ -381,20 +381,26 @@ upf() {
         _print_status "󰅙" "Download failed"
         echo ""; return 1
     fi
-    _print_status "󰄬" "Betterfox fetched"
 
-    if [[ -f "$OVERRIDES" ]]; then
-        cat "$OVERRIDES" >> "$TEMP_FILE"
-        _print_status "󰄬" "Overrides applied"
+    if [[ -f "$REMOVALS" ]]; then
+        while IFS= read -r key; do
+            [[ -z "$key" ]] && continue
+            sed -i "/user_pref(\"${key}\"/d" "$TEMP_FILE"
+        done < "$REMOVALS"
+        _print_status "󰄬" "Removals applied"
     else
-        _print_status "󰀦" "No overrides file found, skipping"
+        _print_status "󰀦" "No removals file found, skipping"
     fi
 
     local found=false
     while IFS= read -r times_file; do
-        local profile_path=$(dirname "$times_file")
-        cp "$TEMP_FILE" "$profile_path/user.js"
-        _print_status "󰄬" "$(basename "$profile_path")"
+        local profile_path
+        profile_path=$(dirname "$times_file")
+        if cp "$TEMP_FILE" "$profile_path/user.js"; then
+            _print_status "󰄬" "$(basename "$profile_path")"
+        else
+            _print_status "󰅙" "$(basename "$profile_path")"
+        fi
         found=true
     done < <(find "$FF_DIR" -maxdepth 2 -mindepth 2 -name "times.json")
 
