@@ -223,7 +223,31 @@ fi
 echo ""
 
 # ==============================================================================
-# 10. WALLPAPERS
+# 10. FIREFOX POLICIES
+# ==============================================================================
+_print_header "󰈹" "Firefox Policies"
+
+FIREFOX_POLICY_DIR="/etc/firefox/policies"
+UBLOCK_ID="uBlock0@raymondhill.net"
+UBLOCK_URL="https://addons.mozilla.org/firefox/downloads/latest/ublock-origin/latest.xpi"
+
+sudo mkdir -p "$FIREFOX_POLICY_DIR"
+echo "{
+  \"policies\": {
+    \"ExtensionSettings\": {
+      \"${UBLOCK_ID}\": {
+        \"installation_mode\": \"force_installed\",
+        \"install_url\": \"${UBLOCK_URL}\"
+      }
+    }
+  }
+}" | sudo tee "$FIREFOX_POLICY_DIR/policies.json" > /dev/null \
+    && ok "Firefox policies applied." \
+    || err "Failed to apply Firefox policies."
+echo ""
+
+# ==============================================================================
+# 11. WALLPAPERS
 # ==============================================================================
 _print_header "󰹧" "Wallpapers"
 
@@ -243,7 +267,7 @@ fi
 echo ""
 
 # ==============================================================================
-# 11. THEMES
+# 12. THEMES
 # ==============================================================================
 _print_header "󰔎" "Installing Themes"
 
@@ -284,7 +308,7 @@ fi
 echo ""
 
 # ==============================================================================
-# 12. NEOVIM CONFIGURATION
+# 13. NEOVIM CONFIGURATION
 # ==============================================================================
 _print_header "󰕮" "Neovim Configuration"
 
@@ -306,7 +330,7 @@ fi
 echo ""
 
 # ==============================================================================
-# 13. TIMER SCRIPT
+# 14. TIMER SCRIPT
 # ==============================================================================
 _print_header "󰔛" "Timer Script"
 
