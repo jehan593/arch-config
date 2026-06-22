@@ -385,7 +385,7 @@ upc() {
 }
 
 upall() {
-    yay -Syu --noconfirm && upf && upwp && upc
+    _print_header "󰏖" "Package Upgrade" && yay -Syu --noconfirm && upf && upwp && upc
 }
 
 upp() {
