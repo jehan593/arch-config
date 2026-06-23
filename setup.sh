@@ -77,6 +77,7 @@ DEPENDENCIES=(
     "starship" "fzf" "zoxide"
     "mpv" "xclip" "neovim"
     "reflector" "pacman-contrib" "git" "expac" "qview"
+    "tldr" "topgrade"
 )
 
 info "Updating package database..."
@@ -86,6 +87,11 @@ yay -S --needed --noconfirm "${DEPENDENCIES[@]}" \
 
 info "Initializing plocate database..."
 sudo updatedb
+
+info "Updating tldr pages..."
+tldr --update \
+    && ok "tldr pages updated." \
+    || err "Failed to update tldr pages."
 echo ""
 
 # Symlinks

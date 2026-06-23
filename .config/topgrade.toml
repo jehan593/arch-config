@@ -1,0 +1,5 @@
+[misc]
+pre_sudo = true
+sudo_loop = true
+
+

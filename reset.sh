@@ -278,13 +278,13 @@ echo ""
 _print_header "󰏖" "Optional: Package Removal"
 
 info "Targets: wireproxy wgcf wireguard-tools plocate neovim starship"
-info "         fzf zoxide mpv xclip reflector pacman-contrib expac qview"
+info "         fzf zoxide mpv xclip reflector pacman-contrib expac qview tldr topgrade"
 read -p "$(echo -e "${COLOR_YELLOW}Remove these packages? [y/N]: ${RST}")" remove_pkgs
 
 if [[ "$remove_pkgs" =~ ^[Yy]$ ]]; then
     yay -Rns --noconfirm \
         wireproxy wgcf wireguard-tools plocate neovim starship \
-        fzf zoxide mpv xclip reflector pacman-contrib expac qview
+        fzf zoxide mpv xclip reflector pacman-contrib expac qview tldr topgrade
     [ $? -eq 0 ] && ok "Packages removed" || err "Failed to remove some packages"
 else
     info "Skipping package removal."
