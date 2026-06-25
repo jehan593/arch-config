@@ -375,8 +375,8 @@ upc() {
     if [[ $? -eq 0 ]]; then
         _print_status "󰄬" "Config synced"
         echo ""
-        echo -e "${NORD_GREEN}󰑓  Reloading profile...${RST}"
-        source ~/.bashrc
+        echo -e "${NORD_YELLOW}󰌵  run 'reload' to apply changes"
+        echo ""
     else
         _print_status "󰅙" "Sync failed"
         echo ""
@@ -385,7 +385,19 @@ upc() {
 }
 
 upall() {
-    _print_header "󰏖" "Package Upgrade" && yay -Syu --noconfirm && upf && upwp && upc
+    upp && upf && upwp && upc 
+    echo ""
+
+    read -rp " Run topgrade as well? [y/N]: " run_topgrade
+    run_topgrade="${run_topgrade,,}"
+    if [[ "$run_topgrade" == "y" || "$run_topgrade" == "yes" ]]; then
+        if command -v topgrade &>/dev/null; then
+            _print_header "" "topgrade"
+            topgrade
+        else
+            echo -e "${NORD_RED}󰅙  topgrade is not installed.${RST}"
+        fi
+    fi
 }
 
 upp() {
@@ -396,7 +408,7 @@ upp() {
     local label=$(echo "$choice" | xargs)
     echo ""
 
-    _print_header "󰑮" "Upgrading: $label"
+    _print_header "󰑮" "Upgrading Packages: $label"
     case "$label" in
         All) yay -Syu --noconfirm ;;
         AUR) yay -Sua --noconfirm ;;

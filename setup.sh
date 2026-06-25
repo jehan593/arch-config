@@ -181,22 +181,32 @@ echo ""
 _print_header "󰈹" "Firefox Policies"
 
 FIREFOX_POLICY_DIR="/etc/firefox/policies"
-UBLOCK_ID="uBlock0@raymondhill.net"
-UBLOCK_URL="https://addons.mozilla.org/firefox/downloads/latest/ublock-origin/latest.xpi"
+FIREFOX_POLICY_SRC="$DOTDIR/.config/firefox/policies.json"
 
-sudo mkdir -p "$FIREFOX_POLICY_DIR"
-echo "{
-  \"policies\": {
-    \"ExtensionSettings\": {
-      \"${UBLOCK_ID}\": {
-        \"installation_mode\": \"normal_installed\",
-        \"install_url\": \"${UBLOCK_URL}\"
-      }
-    }
-  }
-}" | sudo tee "$FIREFOX_POLICY_DIR/policies.json" > /dev/null \
-    && ok "Firefox policies applied." \
-    || err "Failed to apply Firefox policies."
+if [[ -f "$FIREFOX_POLICY_SRC" ]]; then
+    sudo mkdir -p "$FIREFOX_POLICY_DIR"
+    sudo cp "$FIREFOX_POLICY_SRC" "$FIREFOX_POLICY_DIR/policies.json"
+    ok "Firefox policies applied."
+else
+    info "policies.json not found in repo, skipping."
+fi
+echo ""
+
+# VS Code Policies
+_print_header "󰨞" "VS Code Policies"
+
+VSCODE_POLICY_DIR="/etc/vscode"
+VSCODE_POLICY_SRC="$DOTDIR/.config/vscode/policy.json"
+
+if [[ -f "$VSCODE_POLICY_SRC" ]]; then
+    sudo mkdir -p "$VSCODE_POLICY_DIR"
+    sudo cp "$VSCODE_POLICY_SRC" "$VSCODE_POLICY_DIR/policy.json"
+    sudo chmod 644 "$VSCODE_POLICY_DIR/policy.json"
+    sudo chown root:root "$VSCODE_POLICY_DIR/policy.json"
+    ok "VS Code policies applied."
+else
+    info "policy.json not found in repo, skipping."
+fi
 echo ""
 
 # Wallpapers

@@ -225,6 +225,18 @@ else
 fi
 echo ""
 
+# Remove VS Code Policies
+_print_header "󰨞" "VS Code Policies"
+
+VSCODE_POLICY_FILE="/etc/vscode/policy.json"
+if [[ -f "$VSCODE_POLICY_FILE" ]]; then
+    sudo rm -f "$VSCODE_POLICY_FILE"
+    ok "VS Code policies removed."
+else
+    info "VS Code policies not found, skipping."
+fi
+echo ""
+
 # Remove Chaotic-AUR
 _print_header "󰒓" "Chaotic-AUR"
 

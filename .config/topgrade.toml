@@ -1,5 +1,13 @@
 [misc]
 pre_sudo = true
 sudo_loop = true
+assume_yes = true
+cleanup = true
+ask_retry = false
+no_self_update = false
+set_title = false
+disable = ["system"]
+
+
 
 
