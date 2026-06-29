@@ -77,7 +77,7 @@ DEPENDENCIES=(
     "starship" "fzf" "zoxide"
     "mpv" "xclip" "neovim"
     "reflector" "pacman-contrib" "git" "expac" "qview"
-    "tldr" "topgrade" "gnome-gnome-session"
+    "tldr" "topgrade" "gnome-session"
 )
 
 info "Updating package database..."
