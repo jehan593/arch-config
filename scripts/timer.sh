@@ -271,6 +271,21 @@ printf '\e[?25l'
 stty_save=$(stty -g)
 stty -echo -icanon min 0 time 0
 
+# Prevent auto-lock/idle while the timer runs — without changing any
+# persistent setting, same idea as Windows' SetThreadExecutionState in
+# the PowerShell version. gnome-session-inhibit holds a live D-Bus
+# connection to cinnamon-session (a GNOME-session fork) for as long as
+# its wrapped process runs. The inhibitor is automatically released the
+# instant that connection drops, for ANY reason — clean exit, kill -9,
+# a crash, or the whole machine losing power. Nothing persistent is ever
+# touched, so there's nothing to restore. --inhibit idle only (no
+# suspend), so closing the lid still suspends normally.
+INHIBIT_PID=""
+if command -v gnome-session-inhibit &>/dev/null; then
+    gnome-session-inhibit --inhibit idle --reason "Timer running" -- sleep infinity &
+    INHIBIT_PID=$!
+fi
+
 remaining=$total_secs
 paused=0
 last_w=0
@@ -281,12 +296,13 @@ pct_row=0
 hint_row=0
 
 _cleanup() {
+    [[ -n "$INHIBIT_PID" ]] && kill "$INHIBIT_PID" 2>/dev/null
     stty "$stty_save"
     printf '\e[?25h'
     printf '\e[?1049l'
     exit 0
 }
-trap _cleanup INT TERM EXIT
+trap _cleanup INT TERM EXIT HUP
 
 _check_resize() {
     local label="$1"
