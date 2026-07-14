@@ -2,7 +2,9 @@
 
 # Timer
 
-source "$ARCH_CONFIG_PATH/helpers/common-helpers.sh"
+source "$ARCH_CONFIG_PATH/helpers/colors-nord.sh"
+source "$ARCH_CONFIG_PATH/helpers/printer.sh"
+source "$ARCH_CONFIG_PATH/helpers/dep-checker.sh"
 
 _test_dependencies stty || exit 1
 
@@ -219,7 +221,7 @@ _draw_dynamic() {
         bar_color="${NORD_ORANGE}"
     else
         time_color="${NORD_GREEN}"
-        bar_color="${NORD_BLUE}"
+        bar_color="${NORD_CYAN_L}"
     fi
 
     local rows_str
@@ -248,14 +250,14 @@ _draw_dynamic() {
 }
 
 if [[ -z "$1" ]]; then
-    _print_header "Usage: timer <duration>" ""
-    echo -e "${NORD_SNOW_1}Examples: 30s, 5m, 1h, 1h30m${RST}"
+    printfc "$NORD_BLUE" "\n>Usage: timer <duration>"
+    printfc "$NORD_DIM" "Examples: 30s, 5m, 1h, 1h30m"
     exit 1
 fi
 
 total_secs=$(_parse_duration "$1")
 if (( total_secs <= 0 )); then
-    _print_status "error" "Invalid duration: $1"
+    printfc "$NORD_RED" "Invalid duration: %s" "$1"
     exit 1
 fi
 

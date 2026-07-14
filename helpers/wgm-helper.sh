@@ -1,4 +1,4 @@
-# wgm-helper.sh — shared by scripts/wgm/wgm.sh and reset.sh
+# wgm-helper.sh — shared by tools/wgm.sh and reset.sh
 
 _wgm_set_paths() {
     local base="$1"

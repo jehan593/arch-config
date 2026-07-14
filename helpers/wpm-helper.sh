@@ -1,4 +1,4 @@
-# wpm-helper.sh — shared by scripts/wpm/wpm.sh and reset.sh
+# wpm-helper.sh — shared by tools/wpm.sh and reset.sh
 
 _wpm_set_paths() {
     local base="$1"
