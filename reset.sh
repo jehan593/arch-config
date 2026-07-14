@@ -1,121 +1,153 @@
 #!/bin/bash
-# Arch Dotfiles Reset
 
-if [[ "$EUID" -eq 0 ]]; then
-    echo -e "\e[31mDo not run this script as root.\e[0m"
-    exit 1
-fi
+# ==============================================================================
+# ARCH DOTFILES RESET
+# ==============================================================================
 
 DOTDIR="$(cd "$(dirname "$(realpath "$0")")" && pwd)"
 
-source "$DOTDIR/helpers/setup-helpers.sh"
+source "$DOTDIR/helpers/colors-standard.sh"
+source "$DOTDIR/helpers/printer.sh"
+source "$DOTDIR/helpers/pkg-list.sh"
+source "$DOTDIR/helpers/theme-settings.sh"
+source "$DOTDIR/helpers/link-helpers.sh"
 
-echo -e "${COLOR_RED}Arch Dotfiles Reset${RST}"
-echo -e "${COLOR_YELLOW}This will UNDO everything setup.sh configured.${RST}\n"
+if [[ "$EUID" -eq 0 ]]; then
+    printfc "$RED" "Do not run this script as root."
+    exit 1
+fi
 
-_print_header "Pre-flight" ""
-read -p "$(echo -e "${COLOR_YELLOW}Are you sure you want to reset? [y/N]: ${RST}")" confirm
-[[ "$confirm" =~ ^[Yy]$ ]] || { info "Aborted."; echo ""; exit 0; }
+# ==============================================================================
+# START
+# ==============================================================================
+
+printfc "$CYAN" "\n┌───────────────────────┐"
+printfc "$CYAN" "│  Arch Dotfiles Reset  │"
+printfc "$CYAN" "└───────────────────────┘"
+printfc "$YELLOW" "This will UNDO everything setup.sh configured."
+printfc -n "$YELLOW" "Are you sure you want to reset? [y/N]: "
+read -r confirm
+[[ "$confirm" =~ ^[Yy]$ ]] || { echo -e "\nAborted.\n"; exit 0; }
 echo ""
 
-_print_header "Sudo Authentication" ""
-sudo -v || { err "Sudo authentication failed."; exit 1; }
-ok "Sudo authenticated."
+sudo -v || { printfc "$RED" "Sudo authentication failed."; exit 1; }
+printfc "$GREEN" "Sudo authenticated."
 echo ""
 
-# Remove Environment Variable
-_print_header "Environment Variable" ""
+# ==============================================================================
+# 1. ENVIRONMENT VARIABLE
+# ==============================================================================
+
+printfc "$BLUE" "\n>Environment Variable"
 
 if [[ -f "/etc/profile.d/arch-config.sh" ]]; then
     sudo rm -f /etc/profile.d/arch-config.sh
-    ok "Removed ARCH_CONFIG_PATH (/etc/profile.d/arch-config.sh)"
+    printfc "$GREEN" "Removed ARCH_CONFIG_PATH (/etc/profile.d/arch-config.sh)"
 else
-    info "ARCH_CONFIG_PATH file not found, skipping."
+    printfc "$YELLOW" "ARCH_CONFIG_PATH file not found, skipping."
 fi
 echo ""
 
-# Home Files
-_print_header "Removing Home Files" ""
+# ==============================================================================
+# 2. HOME FILES
+# ==============================================================================
+
+printfc "$BLUE" "\n>Removing Home Files\n"
 
 _home_file_action() {
     local src="$1" target="$2"
     if [[ -L "$target" ]]; then
         rm "$target"
-        ok "Removed symlink: ${target/#$HOME/\~}"
+        printfc "$GREEN" "Removed symlink: %s" "${target/#$HOME/\~}"
 
         local backups=("$target".bak.*)
         if [[ -e "${backups[0]}" ]]; then
             local latest="${backups[-1]}"
             mv "$latest" "$target"
-            ok "Restored backup: ${target/#$HOME/\~}"
+            printfc "$GREEN" "Restored backup: %s" "${target/#$HOME/\~}"
             if [[ ${#backups[@]} -gt 1 ]]; then
-                info "$(( ${#backups[@]} - 1 )) older backup(s) of ${target/#$HOME/\~} remain, not auto-restored"
+                printfc "$YELLOW" "%s older backup(s) of %s remain, not auto-restored" "$(( ${#backups[@]} - 1 ))" "${target/#$HOME/\~}"
             fi
         fi
     else
-        info "Not a symlink, skipping: ${target/#$HOME/\~}"
+        printfc "$YELLOW" "Not a symlink, skipping: %s" "${target/#$HOME/\~}"
     fi
 }
 _each_home_file
 echo ""
 
-# Scripts
-_print_header "Removing Scripts" ""
+# ==============================================================================
+# 3. TOOLS
+# ==============================================================================
 
-_script_file_action() {
+printfc "$BLUE" "\n>Removing Tools\n"
+
+_tool_file_action() {
     local name="$1" src="$2"
     if [[ -L "/usr/local/bin/$name" ]]; then
         sudo rm -f "/usr/local/bin/$name"
-        ok "Removed $name from /usr/local/bin."
+        printfc "$GREEN" "Removed %s from /usr/local/bin." "$name"
     else
-        info "$name symlink not found, skipping."
+        printfc "$YELLOW" "%s symlink not found, skipping." "$name"
     fi
 }
-_each_script_file
+_each_tool_file
 echo ""
 
-# Etc Files
-_print_header "Removing Etc Files" ""
+# ==============================================================================
+# 4. ETC FILES
+# ==============================================================================
+
+printfc "$BLUE" "\n>Removing Etc Files\n"
 
 _etc_file_action() {
     local src="$1" dest="$2"
     if [[ -f "$dest" ]]; then
         sudo rm -f "$dest"
-        ok "Removed policy: $dest"
+        printfc "$GREEN" "Removed policy: %s" "$dest"
     else
-        info "Policy not found, skipping: $dest"
+        printfc "$YELLOW" "Policy not found, skipping: %s" "$dest"
     fi
 }
 _each_etc_file
 echo ""
 
-# Remove Sudoers Rule
-_print_header "Passwordless updatedb" ""
+# ==============================================================================
+# 5. REMOVE SUDOERS RULE
+# ==============================================================================
+
+printfc "$BLUE" "\n>Passwordless updatedb"
 
 SUDOERS_FILE="/etc/sudoers.d/updatedb-nopasswd"
 if [[ -f "$SUDOERS_FILE" ]]; then
     sudo rm -f "$SUDOERS_FILE"
-    ok "Removed sudoers rule."
+    printfc "$GREEN" "Removed sudoers rule."
 else
-    info "Sudoers rule not found, skipping."
+    printfc "$YELLOW" "Sudoers rule not found, skipping."
 fi
 echo ""
 
-# Remove Pacman Candy
-_print_header "Pacman Config" ""
+# ==============================================================================
+# 6. REMOVE PACMAN CANDY
+# ==============================================================================
+
+printfc "$BLUE" "\n>Pacman Config"
 
 if grep -q "ILoveCandy" /etc/pacman.conf; then
     sudo sed -i '/^ILoveCandy/d' /etc/pacman.conf
-    ok "ILoveCandy removed from pacman.conf"
+    printfc "$GREEN" "ILoveCandy removed from pacman.conf"
 else
-    info "ILoveCandy not found, skipping."
+    printfc "$YELLOW" "ILoveCandy not found, skipping."
 fi
 echo ""
 
-# Stop and Remove wgm
-_print_header "wgm / WARP" ""
+# ==============================================================================
+# 7. STOP AND REMOVE wgm
+# ==============================================================================
 
-source "$DOTDIR/scripts/wgm/wgm-helper.sh"
+printfc "$BLUE" "\n>wgm / WARP"
+
+source "$DOTDIR/helpers/wgm-helper.sh"
 _wgm_set_paths "$HOME"
 WGM_BACKUP="$BACKUP_ROOT"
 
@@ -123,10 +155,14 @@ active=$(_get_active_tunnel)
 
 if [[ -n "$active" ]]; then
     sudo systemctl disable --now "wg-quick@$active"
-    [ $? -eq 0 ] && ok "Stopped tunnel: $active" || err "Failed to stop tunnel: $active"
+    if [ $? -eq 0 ]; then
+        printfc "$GREEN" "Stopped tunnel: %s" "$active"
+    else
+        printfc "$RED" "Failed to stop tunnel: %s" "$active"
+    fi
     sudo rm -f "$WG_DIR/$active.conf"
 else
-    info "No active tunnel found, skipping."
+    printfc "$YELLOW" "No active tunnel found, skipping."
 fi
 
 if sudo test -d "$CONFIGS_DIR"; then
@@ -137,27 +173,32 @@ if sudo test -d "$CONFIGS_DIR"; then
         sudo mkdir -p "$WGM_BACKUP"
         for conf in "${confs[@]}"; do
             sudo cp "$conf" "$WGM_BACKUP/"
-            ok "Backed up: $(basename "$conf")"
+            printfc "$GREEN" "Backed up: %s" "$(basename "$conf")"
         done
         sudo chown -R "$USER:$USER" "$WGM_BACKUP"
-        ok "User configs backed up to $WGM_BACKUP"
+        printfc "$GREEN" "User configs backed up to %s" "$WGM_BACKUP"
     fi
 fi
 
-sudo test -d "$WGM_ROOT" && sudo rm -rf "$WGM_ROOT" && ok "Removed ~/.config/arch-config-files/wgm"
+sudo test -d "$WGM_ROOT" && sudo rm -rf "$WGM_ROOT" && printfc "$GREEN" "Removed ~/.config/arch-config-files/wgm"
 echo ""
 
-# Remove wpm tunnels
-_print_header "wpm" ""
+# ==============================================================================
+# 8. REMOVE wpm TUNNELS
+# ==============================================================================
+
+printfc "$BLUE" "\n>wpm"
 
 shopt -s nullglob
 services=(/etc/systemd/system/*-wpm.service)
 shopt -u nullglob
+wpm_kept=false
 if [[ ${#services[@]} -gt 0 ]]; then
-    read -p "$(echo -e "${COLOR_YELLOW}Found ${#services[@]} wpm tunnel(s). Stop and remove them? [y/N]: ${RST}")" remove_services
-    if [[ "$remove_services" =~ ^[Yy]$ ]]; then
+    printfc -n "$YELLOW" "Found ${#services[@]} wpm tunnel(s). Stop and remove them? [y/N]: "
+    read -r confirm
+    if [[ "$confirm" =~ ^[Yy]$ ]]; then
         echo ""
-        source "$DOTDIR/scripts/wpm/wpm-helper.sh"
+        source "$DOTDIR/helpers/wpm-helper.sh"
         _wpm_set_paths "$HOME"
         BACKUP_DIR="$BACKUP_ROOT"
         if [[ -d "$CONF_DIR" ]]; then
@@ -167,7 +208,7 @@ if [[ ${#services[@]} -gt 0 ]]; then
                 sudo cp "$CONF_DIR"/*.conf "$BACKUP_DIR/"
                 sudo chmod 644 "$BACKUP_DIR/"*.conf
                 sudo chown "$USER:$USER" "$BACKUP_DIR/"*.conf
-                ok "Configs backed up to $BACKUP_DIR"
+                printfc "$GREEN" "Configs backed up to %s" "$BACKUP_DIR"
             fi
         fi
         for service in "${services[@]}"; do
@@ -175,77 +216,94 @@ if [[ ${#services[@]} -gt 0 ]]; then
             sudo systemctl stop "$NAME"
             sudo systemctl disable "$NAME"
             sudo rm -f "$service"
-            ok "Removed tunnel: $NAME"
+            printfc "$GREEN" "Removed tunnel: %s" "$NAME"
         done
         sudo rm -rf "$CONF_DIR"
         sudo systemctl daemon-reload
-        ok "All tunnels removed."
+        printfc "$GREEN" "All tunnels removed."
     else
-        info "Skipping tunnel removal."
+        wpm_kept=true
+        printfc "$YELLOW" "Skipping tunnel removal."
     fi
 else
-    info "No wpm tunnels found, skipping."
+    printfc "$YELLOW" "No wpm tunnels found, skipping."
 fi
 echo ""
 
-# Remove Chaotic-AUR
-_print_header "Chaotic-AUR" ""
+# ==============================================================================
+# 9. REMOVE CHAOTIC-AUR
+# ==============================================================================
+
+printfc "$BLUE" "\n>Chaotic-AUR"
 
 if grep -q "\[chaotic-aur\]" /etc/pacman.conf; then
     sudo sed -i '/\[chaotic-aur\]/,/Include.*chaotic-mirrorlist/d' /etc/pacman.conf
     sudo pacman -Rns --noconfirm chaotic-keyring chaotic-mirrorlist
     sudo pacman -Syy
-    ok "Chaotic-AUR removed."
+    printfc "$GREEN" "Chaotic-AUR removed."
 else
-    info "Chaotic-AUR not configured, skipping."
+    printfc "$YELLOW" "Chaotic-AUR not configured, skipping."
 fi
 echo ""
 
-# Remove Wallpapers
-_print_header "Wallpapers" ""
+# ==============================================================================
+# 10. REMOVE WALLPAPERS
+# ==============================================================================
+
+printfc "$BLUE" "\n>Wallpapers"
 
 WALLPAPERS_DIR="$HOME/Pictures/config-wallpapers"
 if [[ -d "$WALLPAPERS_DIR" ]]; then
-    read -p "$(echo -e "${COLOR_YELLOW}Remove wallpapers directory? [y/N]: ${RST}")" remove_wallpapers
-    if [[ "$remove_wallpapers" =~ ^[Yy]$ ]]; then
+    printfc -n "$YELLOW" "Remove wallpapers directory? [y/N]: "
+    read -r confirm
+    if [[ "$confirm" =~ ^[Yy]$ ]]; then
         rm -rf "$WALLPAPERS_DIR"
-        ok "Wallpapers removed."
+        printfc "$GREEN" "Wallpapers removed."
     else
-        info "Skipping wallpapers removal."
+        printfc "$YELLOW" "Skipping wallpapers removal."
     fi
 else
-    info "Wallpapers directory not found, skipping."
+    printfc "$YELLOW" "Wallpapers directory not found, skipping."
 fi
 echo ""
 
-# Restore Theme & Font Defaults
-_print_header "Restoring Theme & Font Defaults" ""
+# ==============================================================================
+# 11. RESTORE THEME & FONT DEFAULTS
+# ==============================================================================
+
+printfc "$BLUE" "\n>Restoring Theme & Font Defaults"
 
 for entry in "${THEME_SETTINGS[@]}"; do
     IFS='|' read -r schema key _ <<< "$entry"
     gsettings reset "$schema" "$key" \
-        && ok "Reset $schema $key" \
-        || err "Failed to reset $schema $key"
+        && printfc "$GREEN" "Reset %s %s" "$schema" "$key" \
+        || printfc "$RED" "Failed to reset %s %s" "$schema" "$key"
 done
 echo ""
 
-# Optional Package Removal
-_print_header "Optional: Package Removal" ""
+# ==============================================================================
+# 12. OPTIONAL PACKAGE REMOVAL
+# ==============================================================================
 
-info "Packages installed by setup.sh — remove manually if you no longer use them:"
+printfc "$BLUE" "\n>Optional: Package Removal"
+
+printfc "$YELLOW" "Packages installed by setup.sh — remove manually if you no longer use them:"
 for pkg in "${DEPENDENCIES[@]}"; do
-    if [[ "$pkg" == "wireproxy" && -n "$remove_services" && ! "$remove_services" =~ ^[Yy]$ ]]; then
-        info "  $pkg (still running wpm tunnel service(s) you chose to keep — removing it will break them)"
+    if [[ "$pkg" == "wireproxy" && "$wpm_kept" == true ]]; then
+        printfc "$YELLOW" "  %s (still running wpm tunnel service(s) you chose to keep — removing it will break them)" "$pkg"
     else
-        note "  $pkg"
+        printfc "$YELLOW" "  %s" "$pkg"
     fi
 done
 for pkg in "${THEME_PACKAGES[@]}"; do
-    note "  $pkg"
+    printfc "$YELLOW" "  %s" "$pkg"
 done
 echo ""
 
-# Done
-ok "Reset complete! Open a new terminal session."
+# ==============================================================================
+# DONE
+# ==============================================================================
+
+printfc "$GREEN" "Reset complete! Open a new terminal session."
+printfc "$YELLOW" "Your dotfiles repository remains intact."
 echo ""
-echo -e "${COLOR_BLUE}-> Your dotfiles repository remains intact.${RST}"

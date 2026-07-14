@@ -2,8 +2,10 @@
 
 # WireGuard Manager (wpm)
 
-source "$ARCH_CONFIG_PATH/helpers/common-helpers.sh"
-source "$ARCH_CONFIG_PATH/scripts/wpm/wpm-helper.sh"
+source "$ARCH_CONFIG_PATH/helpers/colors-nord.sh"
+source "$ARCH_CONFIG_PATH/helpers/printer.sh"
+source "$ARCH_CONFIG_PATH/helpers/dep-checker.sh"
+source "$ARCH_CONFIG_PATH/helpers/wpm-helper.sh"
 
 _test_dependencies wireproxy ss fzf || exit 1
 
@@ -14,7 +16,7 @@ REAL_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6)
 _wpm_set_paths "$REAL_HOME"
 
 if [ "$EUID" -ne 0 ]; then
-    echo -e "${NORD_CYAN}Elevating...${RST}"
+    sudo -n true 2>/dev/null || printfc "$NORD_YELLOW" "Elevating..."
     exec sudo -E bash "$(realpath "$0")" "$@"
 fi
 
@@ -29,14 +31,14 @@ _wpm_tunnel_info() {
 
 wpm_add() {
     if [[ -z "$1" || -z "$2" || -z "$3" ]]; then
-        _print_status "warning" "Usage: wpm add <name> <config> <port>"
+        printfc "$NORD_YELLOW" "Usage: wpm add <name> <config> <port>"
         return 1
     fi
 
     local NAME="$1"
     CONFIG_PATH=$(realpath "$2" 2>/dev/null)
     if [[ -z "$CONFIG_PATH" ]]; then
-        _print_status "error" "File not found: $2"
+        printfc "$NORD_RED" "File not found: %s" "$2"
         return 1
     fi
 
@@ -44,18 +46,18 @@ wpm_add() {
     local CONF_DEST="$CONF_DIR/${NAME}.conf"
 
     if [[ -f "$CONF_DEST" || -f "/etc/systemd/system/${SERVICE_NAME}.service" ]]; then
-        _print_status "error" "Name '$NAME' already in use"
+        printfc "$NORD_RED" "Name '%s' already in use" "$NAME"
         return 1
     fi
 
     PORT=$3
     if ! [[ "$PORT" =~ ^[0-9]+$ ]] || (( PORT < 1 || PORT > 65535 )); then
-        _print_status "error" "Invalid port: $PORT"
+        printfc "$NORD_RED" "Invalid port: %s" "$PORT"
         return 1
     fi
 
     if ss -tlnp | grep -q ":$PORT "; then
-        _print_status "error" "Port $PORT is already in use"
+        printfc "$NORD_RED" "Port %s is already in use" "$PORT"
         return 1
     fi
 
@@ -64,24 +66,24 @@ wpm_add() {
         [[ -f "$f" ]] || continue
         existing_port=$(grep "BindAddress" "$f" 2>/dev/null | tr -d ' ' | awk -F':' '{print $NF}')
         if [[ "$existing_port" == "$PORT" ]]; then
-            _print_status "error" "Port $PORT already assigned to $(basename "$f" .conf)"
+            printfc "$NORD_RED" "Port %s already assigned to %s" "$PORT" "$(basename "$f" .conf)"
             return 1
         fi
     done
 
-    _print_header "Installing: $NAME" ""
+    printfc "$NORD_BLUE" "\n>Installing: %s" "$NAME"
 
     mkdir -p "$CONF_DIR"
     cp "$CONFIG_PATH" "$CONF_DEST"
     chmod 600 "$CONF_DEST"
-    _print_status "success" "Config copied"
+    printfc "$NORD_GREEN" "Config copied"
 
     if grep -q "BindAddress" "$CONF_DEST"; then
         sed -i "s/BindAddress = .*/BindAddress = 127.0.0.1:$PORT/" "$CONF_DEST"
     else
         echo -e "\n[Socks5]\nBindAddress = 127.0.0.1:$PORT" >> "$CONF_DEST"
     fi
-    _print_status "success" "Bound to port $PORT"
+    printfc "$NORD_GREEN" "Bound to port %s" "$PORT"
 
     cat <<UNIT > /etc/systemd/system/${SERVICE_NAME}.service
 [Unit]
@@ -98,14 +100,23 @@ RestartSec=5
 WantedBy=multi-user.target
 UNIT
 
-    systemctl daemon-reload
-    _print_result $? "Reloaded daemon"
+    if systemctl daemon-reload; then
+        printfc "$NORD_GREEN" "Reloaded daemon"
+    else
+        printfc "$NORD_RED" "Failed to reload daemon"
+    fi
 
-    systemctl enable "$SERVICE_NAME"
-    _print_result $? "Enabled service"
+    if systemctl enable "$SERVICE_NAME"; then
+        printfc "$NORD_GREEN" "Enabled service"
+    else
+        printfc "$NORD_RED" "Failed to enable service"
+    fi
 
-    systemctl restart "$SERVICE_NAME"
-    _print_result $? "Started service"
+    if systemctl restart "$SERVICE_NAME"; then
+        printfc "$NORD_GREEN" "Started service"
+    else
+        printfc "$NORD_RED" "Failed to start service"
+    fi
 
     echo ""
 }
@@ -114,21 +125,20 @@ wpm_ls() {
     shopt -s nullglob
     local services=(/etc/systemd/system/*-wpm.service)
 
-    _print_header "wpm Tunnels" ""
+    printfc "$NORD_BLUE" "\n>wpm Tunnels"
 
     if [[ ${#services[@]} -eq 0 ]]; then
-        _print_status "error" "No tunnels found"
+        printfc "$NORD_RED" "No tunnels found"
         echo ""; return
     fi
 
-    printf "${NORD_D_BLUE}%-25s %-12s %-10s${RST}\n" "SERVICE" "STATUS" "PORT"
-    echo -e "${NORD_POLAR_4}─────────────────────────────────────────────────────${RST}"
+    printfc "$NORD_SNOW_1" "%-25s %-12s %-10s" "SERVICE" "STATUS" "PORT"
+    printfc "$NORD_POLAR_4" "─────────────────────────────────────────────────────"
 
     local service
     for service in "${services[@]}"; do
         _wpm_tunnel_info "$service"
-        printf "${NORD_BLUE}%-25s${RST} ${S_COL}%-12s${RST} ${NORD_SNOW_1}%s${RST}\n" \
-            "$NAME" "$STATUS" "$PORT"
+        printfc "$S_COL" "%-25s %-12s %-10s" "$NAME" "$STATUS" "$PORT"
     done
 
     echo ""
@@ -141,7 +151,7 @@ _wpm_pick_tunnels() {
     local services=(/etc/systemd/system/*-wpm.service)
 
     if [[ ${#services[@]} -eq 0 ]]; then
-        _print_status "error" "No tunnels found"
+        printfc "$NORD_RED" "No tunnels found"
         return 1
     fi
 
@@ -157,7 +167,7 @@ _wpm_pick_tunnels() {
         --header="TAB: select | CTRL-A: toggle all | ENTER: confirm" \
         --prompt="$prompt > " --reverse --height=40%)
     if [[ -z "$selected" ]]; then
-        _print_status "info" "Cancelled"
+        printfc "$NORD_YELLOW" "Cancelled"
         return 1
     fi
 
@@ -170,19 +180,15 @@ _wpm_pick_tunnels() {
 }
 
 wpm_rm() {
-    _print_header "Uninstall Tunnel" ""
+    printfc "$NORD_BLUE" "\n>Uninstall Tunnel"
     _wpm_pick_tunnels "Uninstall" || { echo ""; return; }
     local to_remove=("${WPM_PICKED[@]}") service
 
     echo ""
-    _print_status "warning" "Will uninstall ${#to_remove[@]} tunnel(s):"
+    printfc "$NORD_YELLOW" "Will uninstall %s tunnel(s):" "${#to_remove[@]}"
     for service in "${to_remove[@]}"; do
-        echo -e "${NORD_RED}$(basename "$service" .service)${RST}"
+        printfc "$NORD_RED" "%s" "$(basename "$service" .service)"
     done
-
-    echo ""
-    read -p "$(echo -e "${NORD_BLUE}Confirm? [y/N]: ${RST}")" confirm
-    [[ ! "$confirm" =~ ^[Yy]$ ]] && { _print_status "warning" "Cancelled"; echo ""; return; }
 
     echo ""
     mkdir -p "$BACKUP_ROOT"
@@ -193,15 +199,16 @@ wpm_rm() {
         local CONF_FILE="$CONF_DIR/${NAME%-wpm}.conf"
 
         if [[ -f "$CONF_FILE" ]]; then
-            cp "$CONF_FILE" "$BACKUP_ROOT/${NAME%-wpm}.conf"
-            _print_status "success" "Backup saved to Documents/wpm-backup"
+            local backup_file="$BACKUP_ROOT/${NAME%-wpm}.conf"
+            cp "$CONF_FILE" "$backup_file"
+            printfc "$NORD_GREEN" "Backup: %s" "$backup_file"
         fi
 
         systemctl stop "$NAME"
         systemctl disable "$NAME"
         rm -f "$service" "$CONF_FILE"
         systemctl daemon-reload
-        _print_status "success" "Removed $NAME"
+        printfc "$NORD_GREEN" "Removed %s" "$NAME"
         echo ""
     done
 }
@@ -209,14 +216,17 @@ wpm_rm() {
 _wpm_bulk_action() {
     local verb="$1" header_text="$2" past_tense="$3" prompt="$4"
 
-    _print_header "$header_text" ""
+    printfc "$NORD_BLUE" "\n>%s" "$header_text"
     _wpm_pick_tunnels "$prompt" || { echo ""; return; }
 
     local service
     for service in "${WPM_PICKED[@]}"; do
         local NAME=$(basename "$service" .service)
-        systemctl "$verb" "$NAME"
-        _print_result $? "$past_tense $NAME"
+        if systemctl "$verb" "$NAME"; then
+            printfc "$NORD_GREEN" "%s %s" "$past_tense" "$NAME"
+        else
+            printfc "$NORD_RED" "Failed to %s %s" "$verb" "$NAME"
+        fi
     done
 
     echo ""
@@ -235,13 +245,13 @@ case "$1" in
     stop)    wpm_stop ;;
     restart) wpm_restart ;;
     *)
-        _print_header "wpm Manager" ""
-        printf "${NORD_CYAN}%-12s${RST}${NORD_POLAR_4} -> ${RST}${NORD_SNOW_1}%s${RST}\n" "add"     "<name> <conf> <port>  Install tunnel"
-        printf "${NORD_CYAN}%-12s${RST}${NORD_POLAR_4} -> ${RST}${NORD_SNOW_1}%s${RST}\n" "ls"      "List tunnels"
-        printf "${NORD_CYAN}%-12s${RST}${NORD_POLAR_4} -> ${RST}${NORD_SNOW_1}%s${RST}\n" "rm"      "Uninstall tunnels"
-        printf "${NORD_CYAN}%-12s${RST}${NORD_POLAR_4} -> ${RST}${NORD_SNOW_1}%s${RST}\n" "start"   "Start tunnels"
-        printf "${NORD_CYAN}%-12s${RST}${NORD_POLAR_4} -> ${RST}${NORD_SNOW_1}%s${RST}\n" "stop"    "Stop tunnels"
-        printf "${NORD_CYAN}%-12s${RST}${NORD_POLAR_4} -> ${RST}${NORD_SNOW_1}%s${RST}\n" "restart" "Restart tunnels"
+        printfc "$NORD_BLUE" "\n>wpm Manager\n"
+        printfc "$NORD_SNOW_1" "add <name> <conf> <port>     Install tunnel"
+        printfc "$NORD_SNOW_1" "ls                           List tunnels"
+        printfc "$NORD_SNOW_1" "rm                           Uninstall tunnels"
+        printfc "$NORD_SNOW_1" "start                        Start tunnels"
+        printfc "$NORD_SNOW_1" "stop                         Stop tunnels"
+        printfc "$NORD_SNOW_1" "restart                      Restart tunnels"
         echo ""
         exit 1
         ;;
