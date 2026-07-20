@@ -6,7 +6,7 @@ DEPENDENCIES=(
     "plocate" "curl"
     "starship" "fzf" "zoxide"
     "mpv" "xclip" "neovim"
-    "reflector" "pacman-contrib" "git" "expac" "qview"
+    "reflector" "pacman-contrib" "git" "qview"
     "tldr" "topgrade"
 )
 

@@ -9,15 +9,15 @@ source "$ARCH_CONFIG_PATH/helpers/wgm-helper.sh"
 
 _test_dependencies wg wg-quick fzf || exit 1
 
-REAL_USER="${SUDO_USER:-$USER}"
-REAL_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6)
-
-_wgm_set_paths "$REAL_HOME"
-
 if [ "$EUID" -ne 0 ]; then
     sudo -n true 2>/dev/null || printfc "$NORD_YELLOW" "Elevating permissions..."
     exec sudo -E bash "$(realpath "$0")" "$@"
 fi
+
+REAL_USER="${SUDO_USER:-$USER}"
+REAL_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6)
+
+_wgm_set_paths "$REAL_HOME"
 
 _ensure_dirs() {
     mkdir -p "$WGM_ROOT" "$CONFIGS_DIR"
