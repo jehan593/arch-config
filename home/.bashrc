@@ -22,9 +22,7 @@ if ! _test_dependencies fzf yay git curl xclip checkupdates paccache reflector x
 fi
 
 export EDITOR='nvim'
-export VISUAL='zeditor'
 export MANROFFOPT="-c"
-export PAGER='most'
 export TERM=xterm-256color
 export HISTSIZE=-1
 export HISTFILESIZE=-1
@@ -82,13 +80,14 @@ alias ...='cd ../..'
 alias grep='grep --color=auto'
 alias clear='clear && sys'
 alias reload='source ~/.bashrc && printfc "$NORD_GREEN" "Profile reloaded"'
+aage() {
+    echo $(( ($(date +%s) - $(stat -c %Y /lost+found 2>/dev/null || stat -c %Y /)) / 86400 ))
+}
 rr() {
     local cmd
     cmd=$(HISTTIMEFORMAT='' history 2 | head -1 | sed 's/^[[:space:]]*[0-9]*[[:space:]]*//')
     printfc "$NORD_SNOW_1" "Sudo: %s" "$cmd"
     sudo -E bash -c "
-        source \"$ARCH_CONFIG_PATH/helpers/colors-nord.sh\"
-        source \"$ARCH_CONFIG_PATH/helpers/printer.sh\"
         shopt -s expand_aliases
         $(alias)
         $(declare -f)
@@ -96,11 +95,6 @@ rr() {
     "
 }
 alias conf='[[ -x $(command -v zeditor) ]] && (printfc "$NORD_YELLOW" "Opening configs..." && zeditor "$ARCH_CONFIG_PATH/") || printfc "$NORD_RED" "Zed not found"'
-alias age='printfc "$NORD_SNOW_1" "OS Age: $(( ($(date +%s) - $(stat -c %Y /lost+found 2>/dev/null || stat -c %Y /)) / 86400 )) days"'
-aage() {
-    local age=$(( ($(date +%s) - $(stat -c %Y /lost+found 2>/dev/null || stat -c %Y /)) / 86400 ))
-    printfc "$NORD_SNOW_1" "%s days" "$age"
-}
 
 # System Functions (Icons explicitly kept here)
 sys() {
@@ -108,7 +102,7 @@ sys() {
     local ker=$(uname -r | cut -d '-' -f1)
     local mem=$(free -h | awk '/^Mem:/ {print $3 " / " $2}')
     local uptime=$(uptime -p | sed 's/up //')
-    local age=$(( ($(date +%s) - $(stat -c %Y /lost+found 2>/dev/null || stat -c %Y /)) / 86400 ))
+    local age=$(aage)
 
     local f="  %s  %-12s %s"
     echo ""
@@ -129,16 +123,28 @@ sys() {
 }
 
 if [[ -f "$IDEAPAD_CONSERVATION" ]]; then
-    batt-on() {
-        echo 1 | sudo tee "$IDEAPAD_CONSERVATION" > /dev/null
-        printfc "$NORD_BLUE" "\n>Battery"
-        printfc "$NORD_GREEN" "Conservation mode enabled (80% limit)"
-        echo ""
-    }
-    batt-off() {
-        echo 0 | sudo tee "$IDEAPAD_CONSERVATION" > /dev/null
-        printfc "$NORD_BLUE" "\n>Battery"
-        printfc "$NORD_GREEN" "Full charge enabled"
+    cons-mode() {
+        local action="$1"
+        case "$action" in
+            on)
+                if echo 1 | sudo tee "$IDEAPAD_CONSERVATION" > /dev/null; then
+                    printfc "$NORD_GREEN" "Conservation mode enabled (80%% limit)"
+                else
+                    printfc "$NORD_RED" "Failed to enable conservation mode"
+                fi
+                ;;
+            off)
+                if echo 0 | sudo tee "$IDEAPAD_CONSERVATION" > /dev/null; then
+                    printfc "$NORD_GREEN" "Full charge enabled"
+                else
+                    printfc "$NORD_RED" "Failed to enable full charge"
+                fi
+                ;;
+            *)
+                printfc "$NORD_RED" "Usage: cons-mode {on|off}"
+                return 1
+                ;;
+        esac
         echo ""
     }
 fi
@@ -200,8 +206,11 @@ cleanup() {
 }
 
 cup() {
-    sudo pacman -Sy --noconfirm &>/dev/null
-    [[ $? -eq 0 ]] || printfc "$NORD_RED" "Failed to sync package database"
+    if ! sudo pacman -Sy --noconfirm &>/dev/null; then
+        printfc "$NORD_RED" "Failed to sync package database"
+        echo ""
+        return 1
+    fi
     local any=false repo pkg line
     local all_updates=$(checkupdates 2>/dev/null)
     local aur_updates=$(yay -Qua 2>/dev/null)
@@ -334,47 +343,54 @@ uinst() {
 }
 
 # Network & Connectivity
-cdns-on() {
+sys-res() {
+    local action="$1"
     printfc "$NORD_BLUE" "\n>DNS Config"
+    local ok=true
 
-    if sudo cp /etc/systemd/resolved.conf.bak /etc/systemd/resolved.conf; then
-        printfc "$NORD_GREEN" "Restored DNS config"
-    else
-        printfc "$NORD_RED" "Failed to restore DNS config"
-    fi
+    case "$action" in
+        on)
+            if sudo cp /etc/systemd/resolved.conf.bak /etc/systemd/resolved.conf; then
+                printfc "$NORD_GREEN" "Restored DNS config"
+            else
+                printfc "$NORD_RED" "Failed to restore DNS config"
+                ok=false
+            fi
+            ;;
+        off)
+            if sudo cp /etc/systemd/resolved.conf /etc/systemd/resolved.conf.bak; then
+                printfc "$NORD_GREEN" "Backed up DNS config"
+            else
+                printfc "$NORD_RED" "Failed to back up DNS config"
+                ok=false
+            fi
+            if sudo truncate -s 0 /etc/systemd/resolved.conf; then
+                printfc "$NORD_GREEN" "Cleared DNS config"
+            else
+                printfc "$NORD_RED" "Failed to clear DNS config"
+                ok=false
+            fi
+            ;;
+        *)
+            printfc "$NORD_RED" "Usage: sys-res {on|off}"
+            return 1
+            ;;
+    esac
 
     if sudo systemctl restart systemd-resolved; then
         printfc "$NORD_GREEN" "Restarted DNS service"
     else
         printfc "$NORD_RED" "Failed to restart DNS service"
+        ok=false
     fi
 
-    printfc "$NORD_GREEN" "NextDNS enabled"
-    echo ""
-}
-
-cdns-off() {
-    printfc "$NORD_BLUE" "\n>DNS Config"
-
-    if sudo cp /etc/systemd/resolved.conf /etc/systemd/resolved.conf.bak; then
-        printfc "$NORD_GREEN" "Backed up DNS config"
-    else
-        printfc "$NORD_RED" "Failed to back up DNS config"
+    if [[ "$ok" == true ]]; then
+        if [[ "$action" == "on" ]]; then
+            printfc "$NORD_GREEN" "Restored custom systemd-resolved config"
+        else
+            printfc "$NORD_GREEN" "Cleared systemd-resolved config, using network-provided DNS"
+        fi
     fi
-
-    if sudo truncate -s 0 /etc/systemd/resolved.conf; then
-        printfc "$NORD_GREEN" "Cleared DNS config"
-    else
-        printfc "$NORD_RED" "Failed to clear DNS config"
-    fi
-
-    if sudo systemctl restart systemd-resolved; then
-        printfc "$NORD_GREEN" "Restarted DNS service"
-    else
-        printfc "$NORD_RED" "Failed to restart DNS service"
-    fi
-
-    printfc "$NORD_GREEN" "Default DNS enabled"
     echo ""
 }
 
@@ -429,8 +445,7 @@ upf() {
 
 upc() {
     printfc "$NORD_BLUE" "\n>Config Sync"
-    git -C "$ARCH_CONFIG_PATH" pull --rebase --autostash
-    if [[ $? -eq 0 ]]; then
+    if git -C "$ARCH_CONFIG_PATH" pull --rebase --autostash; then
         printfc "$NORD_GREEN" "Config synced"
         echo ""
         printfc "$NORD_YELLOW" "run 'reload' to apply changes"
@@ -455,8 +470,11 @@ upp() {
     [[ -z "$choices" ]] && return 0
 
     if [[ -n "$(grep -v '^AUR$' <<< "$choices")" ]]; then
-        sudo pacman -Sy --noconfirm &>/dev/null
-        [[ $? -eq 0 ]] || printfc "$NORD_RED" "Failed to sync package database"
+        if ! sudo pacman -Sy --noconfirm &>/dev/null; then
+            printfc "$NORD_RED" "Failed to sync package database"
+            echo ""
+            return 1
+        fi
     fi
 
     local label
@@ -464,7 +482,7 @@ upp() {
         label=$(xargs <<< "$label")
         [[ -z "$label" ]] && continue
         echo ""
-        printfc "$NORD_BLUE" "\n>Upgrading Packages: %s" "$label"
+        printfc "$NORD_BLUE" ">Upgrading Packages: %s" "$label"
         case "$label" in
             AUR) yay -Sua --noconfirm ;;
             *)
@@ -483,9 +501,7 @@ upp() {
 
 up-mirrors() {
     printfc "$NORD_BLUE" "\n>Mirror Update"
-    sudo reflector --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist
-    sudo pacman -Syyu
-    if [[ $? -eq 0 ]]; then
+    if sudo reflector --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist && sudo pacman -Syyu; then
         printfc "$NORD_GREEN" "Mirrors updated"
     else
         printfc "$NORD_RED" "Failed to update mirrors"
@@ -576,8 +592,7 @@ upwp() {
     fi
 
     printfc "$NORD_BLUE" "\n>Wallpapers"
-    git -C "$WALLPAPERS_DIR" pull --rebase --autostash
-    if [[ $? -eq 0 ]]; then
+    if git -C "$WALLPAPERS_DIR" pull --rebase --autostash; then
         printfc "$NORD_GREEN" "Pulled updates"
     else
         printfc "$NORD_RED" "Failed to pull updates"

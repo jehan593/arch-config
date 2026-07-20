@@ -10,15 +10,16 @@ source "$ARCH_CONFIG_PATH/helpers/wpm-helper.sh"
 _test_dependencies wireproxy ss fzf || exit 1
 
 BINARY_PATH="/usr/bin/wireproxy"
-REAL_USER="${SUDO_USER:-$USER}"
-REAL_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6)
-
-_wpm_set_paths "$REAL_HOME"
 
 if [ "$EUID" -ne 0 ]; then
     sudo -n true 2>/dev/null || printfc "$NORD_YELLOW" "Elevating..."
     exec sudo -E bash "$(realpath "$0")" "$@"
 fi
+
+REAL_USER="${SUDO_USER:-$USER}"
+REAL_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6)
+
+_wpm_set_paths "$REAL_HOME"
 
 _wpm_tunnel_info() {
     local service="$1"
