@@ -458,15 +458,19 @@ upc() {
 }
 
 upall() {
-    upp && upf && upwp && upc
+    upp -all && upf && upwp && upc
 }
 
 upp() {
     local repos=$(pacman -Sl 2>/dev/null | awk '{print $1}' | sort -u)
     local choices
-    choices=$(printf "%s\nAUR" "$repos" | \
-        fzf --multi --bind=ctrl-a:toggle-all \
-            --header "Upgrade Packages (TAB: select | CTRL-A: toggle all):" --height=12 --no-info --no-sort --no-input)
+    if [[ "$1" == "-all" ]]; then
+        choices=$(printf "%s\nAUR" "$repos")
+    else
+        choices=$(printf "%s\nAUR" "$repos" | \
+            fzf --multi --bind=ctrl-a:toggle-all \
+                --header "Upgrade Packages (TAB: select | CTRL-A: toggle all):" --height=12 --no-info --no-sort --no-input)
+    fi
     [[ -z "$choices" ]] && return 0
 
     if [[ -n "$(grep -v '^AUR$' <<< "$choices")" ]]; then
