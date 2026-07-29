@@ -73,6 +73,7 @@ alias lsa='ls -a'
 alias lsla='ls -lah'
 alias rmr='rm -r'
 alias rmrf='rm -rf'
+alias rmf='rm -f'
 alias cpr='cp -r'
 alias cpa='cp -a'
 alias ..='cd ..'
@@ -342,58 +343,6 @@ uinst() {
     fi
 }
 
-# Network & Connectivity
-sys-res() {
-    local action="$1"
-    printfc "$NORD_BLUE" "\n>DNS Config"
-    local ok=true
-
-    case "$action" in
-        on)
-            if sudo cp /etc/systemd/resolved.conf.bak /etc/systemd/resolved.conf; then
-                printfc "$NORD_GREEN" "Restored DNS config"
-            else
-                printfc "$NORD_RED" "Failed to restore DNS config"
-                ok=false
-            fi
-            ;;
-        off)
-            if sudo cp /etc/systemd/resolved.conf /etc/systemd/resolved.conf.bak; then
-                printfc "$NORD_GREEN" "Backed up DNS config"
-            else
-                printfc "$NORD_RED" "Failed to back up DNS config"
-                ok=false
-            fi
-            if sudo truncate -s 0 /etc/systemd/resolved.conf; then
-                printfc "$NORD_GREEN" "Cleared DNS config"
-            else
-                printfc "$NORD_RED" "Failed to clear DNS config"
-                ok=false
-            fi
-            ;;
-        *)
-            printfc "$NORD_RED" "Usage: sys-res {on|off}"
-            return 1
-            ;;
-    esac
-
-    if sudo systemctl restart systemd-resolved; then
-        printfc "$NORD_GREEN" "Restarted DNS service"
-    else
-        printfc "$NORD_RED" "Failed to restart DNS service"
-        ok=false
-    fi
-
-    if [[ "$ok" == true ]]; then
-        if [[ "$action" == "on" ]]; then
-            printfc "$NORD_GREEN" "Restored custom systemd-resolved config"
-        else
-            printfc "$NORD_GREEN" "Cleared systemd-resolved config, using network-provided DNS"
-        fi
-    fi
-    echo ""
-}
-
 upf() {
     local URL="https://raw.githubusercontent.com/yokoffing/Betterfox/main/user.js"
     local FF_DIR="$HOME/.config/mozilla/firefox"
@@ -458,49 +407,23 @@ upc() {
 }
 
 upall() {
-    upp -all && upf && upwp && upc
+    upp && upf && upwp && upc
 }
 
 upp() {
-    local repos=$(pacman -Sl 2>/dev/null | awk '{print $1}' | sort -u)
-    local choices
-    if [[ "$1" == "-all" ]]; then
-        choices=$(printf "%s\nAUR" "$repos")
-    else
-        choices=$(printf "%s\nAUR" "$repos" | \
-            fzf --multi --bind=ctrl-a:toggle-all \
-                --header "Upgrade Packages (TAB: select | CTRL-A: toggle all):" --height=12 --no-info --no-sort --no-input)
-    fi
-    [[ -z "$choices" ]] && return 0
-
-    if [[ -n "$(grep -v '^AUR$' <<< "$choices")" ]]; then
-        if ! sudo pacman -Sy --noconfirm &>/dev/null; then
-            printfc "$NORD_RED" "Failed to sync package database"
-            echo ""
-            return 1
-        fi
-    fi
-
-    local label
-    while IFS= read -r label; do
-        label=$(xargs <<< "$label")
-        [[ -z "$label" ]] && continue
-        echo ""
-        printfc "$NORD_BLUE" ">Upgrading Packages: %s" "$label"
-        case "$label" in
-            AUR) yay -Sua --noconfirm ;;
-            *)
-                local repo_pkgs=$(pacman -Sl "$label" 2>/dev/null | awk '{print $2}')
-                local to_upgrade=$(checkupdates 2>/dev/null | awk '{print $1}' | grep -Fwf <(echo "$repo_pkgs"))
-                if [[ -z "$to_upgrade" ]]; then
-                    printfc "$NORD_GREEN" "Packages up to date"
-                else
-                    sudo pacman -S --noconfirm $to_upgrade
-                fi
-                ;;
-        esac
-    done <<< "$choices"
     echo ""
+    printfc "$NORD_BLUE" ">Upgrading Packages: All repos"
+    if sudo pacman -Syu --noconfirm; then
+        echo ""
+        printfc "$NORD_BLUE" ">Upgrading Packages: AUR"
+        yay -Sua --noconfirm
+        echo ""
+        return 0
+    else
+        printfc "$NORD_RED" "Failed to upgrade repo packages"
+        echo ""
+        return 1
+    fi
 }
 
 up-mirrors() {
