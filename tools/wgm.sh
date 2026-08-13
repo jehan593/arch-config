@@ -237,6 +237,23 @@ wgm_rm() {
     echo ""
 }
 
+wgm_ls() {
+    local configs active
+    configs=$(_get_all_configs)
+    active=$(_get_active_tunnel)
+
+    echo ""
+    local name path builtin
+    while IFS='|' read -r name path builtin; do
+        [[ -z "$name" ]] && continue
+        if [[ "$name" == "$active" ]]; then
+            printfc "$NORD_YELLOW" "%s (active)" "$name"
+        else
+            printfc "$NORD_SNOW_1" "%s" "$name"
+        fi
+    done <<< "$configs"
+}
+
 wgm_status() {
     local configs running
     configs=$(_get_all_configs)
@@ -281,6 +298,7 @@ case "$1" in
     off)    wgm_off ;;
     add)    wgm_add "$2" "$3" ;;
     rm)     wgm_rm ;;
+    ls)     wgm_ls ;;
     status) wgm_status ;;
     *)
         printfc "$NORD_BLUE" "\n>wgm Manager\n"
@@ -288,6 +306,7 @@ case "$1" in
         printfc "$NORD_SNOW_1" "off      Disconnect"
         printfc "$NORD_SNOW_1" "add      Add profile"
         printfc "$NORD_SNOW_1" "rm       Remove profile"
+        printfc "$NORD_SNOW_1" "ls       List profiles"
         printfc "$NORD_SNOW_1" "status   Show status"
         echo ""
         printfc "$NORD_YELLOW" "Usage: wgm add <name> <path-to-conf>"
