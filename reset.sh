@@ -10,6 +10,7 @@ source "$DOTDIR/helpers/colors-standard.sh"
 source "$DOTDIR/helpers/printer.sh"
 source "$DOTDIR/helpers/pkg-list.sh"
 source "$DOTDIR/helpers/theme-settings.sh"
+source "$DOTDIR/helpers/repo-list.sh"
 source "$DOTDIR/helpers/link-helpers.sh"
 
 if [[ "$EUID" -eq 0 ]]; then
@@ -247,24 +248,31 @@ fi
 echo ""
 
 # ==============================================================================
-# 10. REMOVE WALLPAPERS
+# 10. REMOVE CLONED REPOS
 # ==============================================================================
 
-printfc "$BLUE" "\n>Wallpapers"
+printfc "$BLUE" "\n>Cloned Repos"
 
-WALLPAPERS_DIR="$HOME/Pictures/config-wallpapers"
-if [[ -d "$WALLPAPERS_DIR" ]]; then
-    printfc -n "$YELLOW" "Remove wallpapers directory? [y/N]: "
-    read -r confirm
-    if [[ "$confirm" =~ ^[Yy]$ ]]; then
-        rm -rf "$WALLPAPERS_DIR"
-        printfc "$GREEN" "Wallpapers removed."
+for entry in "${CLONE_REPOS[@]}"; do
+    IFS='|' read -r repo_url repo_dest _ <<< "$entry"
+    repo_path="${repo_dest/#\~/$HOME}"
+    repo_name="${repo_url##*/}"
+    repo_name="${repo_name%.git}"
+    repo_path="$repo_path/$repo_name"
+
+    if [[ -d "$repo_path" ]]; then
+        printfc -n "$YELLOW" "Remove %s (%s)? [y/N]: " "$repo_name" "${repo_path/#$HOME/\~}"
+        read -r confirm
+        if [[ "$confirm" =~ ^[Yy]$ ]]; then
+            rm -rf "$repo_path"
+            printfc "$GREEN" "Removed %s." "$repo_name"
+        else
+            printfc "$YELLOW" "Skipping removal of %s." "$repo_name"
+        fi
     else
-        printfc "$YELLOW" "Skipping wallpapers removal."
+        printfc "$YELLOW" "%s not found, skipping." "$repo_name"
     fi
-else
-    printfc "$YELLOW" "Wallpapers directory not found, skipping."
-fi
+done
 echo ""
 
 # ==============================================================================

@@ -36,8 +36,9 @@ bash ~/arch-config/reset.sh
 6. Installs the package list in `helpers/pkg-list.sh` plus theme packages.
 7. Adds a passwordless-sudo rule scoped to `updatedb` only.
 8. Enables `Color`/`ILoveCandy` in `pacman.conf`.
-9. Clones a [wallpapers repo](https://github.com/jehan593/my-wallpapers)
-   into `~/Pictures/config-wallpapers`.
+9. Clones every repo in `helpers/repo-list.sh` into `$HOME` (currently the
+   [wallpapers repo](https://github.com/jehan593/my-wallpapers) →
+   `~/Pictures/config-wallpapers`).
 10. Installs the Nord GTK/icon/cursor theme and applies it via `gsettings`.
 
 `reset.sh` reverses each of these in turn (with confirmation prompts before

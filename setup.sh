@@ -10,6 +10,7 @@ source "$DOTDIR/helpers/colors-standard.sh"
 source "$DOTDIR/helpers/printer.sh"
 source "$DOTDIR/helpers/pkg-list.sh"
 source "$DOTDIR/helpers/theme-settings.sh"
+source "$DOTDIR/helpers/repo-list.sh"
 source "$DOTDIR/helpers/link-helpers.sh"
 
 # ==============================================================================
@@ -218,24 +219,31 @@ fi
 echo ""
 
 # ==============================================================================
-# 11. WALLPAPERS
+# 11. CLONE REPOS
 # ==============================================================================
 
-printfc "$BLUE" "\n>Wallpapers"
+printfc "$BLUE" "\n>Cloning Repos"
 
-WALLPAPERS_DIR="$HOME/Pictures/config-wallpapers"
-WALLPAPERS_REPO="https://github.com/jehan593/my-wallpapers"
+for entry in "${CLONE_REPOS[@]}"; do
+    IFS='|' read -r repo_url repo_dest <<< "$entry"
+    repo_path="${repo_dest/#\~/$HOME}"
+    repo_name="${repo_url##*/}"
+    repo_name="${repo_name%.git}"
+    repo_path="$repo_path/$repo_name"
 
-if [[ ! -d "$WALLPAPERS_DIR" ]]; then
-    printfc "$YELLOW" "Cloning wallpapers repo..."
-    git clone --depth 1 "$WALLPAPERS_REPO" "$WALLPAPERS_DIR" \
-        && printfc "$GREEN" "Wallpapers cloned to %s" "$WALLPAPERS_DIR" \
-        || printfc "$RED" "Failed to clone wallpapers repo."
-    git -C "$WALLPAPERS_DIR" config --local credential.helper store
-    printfc "$GREEN" "Git credential store configured."
-else
-    printfc "$GREEN" "Wallpapers already cloned."
-fi
+    if [[ -d "$repo_path/.git" ]]; then
+        printfc "$GREEN" "%s already cloned at %s" "$repo_name" "${repo_path/#$HOME/\~}"
+    elif [[ -e "$repo_path" ]]; then
+        printfc "$YELLOW" "Destination %s already exists, skipping %s" "${repo_path/#$HOME/\~}" "$repo_name"
+    else
+        printfc "$YELLOW" "Cloning %s..." "$repo_name"
+        if git clone --depth 1 "$repo_url" "$repo_path"; then
+            printfc "$GREEN" "Cloned %s to %s" "$repo_name" "${repo_path/#$HOME/\~}"
+        else
+            printfc "$RED" "Failed to clone %s." "$repo_url"
+        fi
+    fi
+done
 echo ""
 
 # ==============================================================================

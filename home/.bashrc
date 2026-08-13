@@ -407,7 +407,7 @@ upc() {
 }
 
 upall() {
-    upp && upf && upwp && upc
+    upp && upf && upc
 }
 
 upp() {
@@ -508,23 +508,6 @@ ff() {
     local quoted="\"$selection\""
     echo -n "$quoted" | xclip -selection clipboard
     printfc "$NORD_GREEN" "Copied: %s" "$selection"
-}
-
-upwp() {
-    local WALLPAPERS_DIR="$HOME/Pictures/config-wallpapers"
-    if [[ ! -d "$WALLPAPERS_DIR" ]]; then
-        printfc "$NORD_BLUE" "\n>Wallpapers"
-        printfc "$NORD_RED" "Directory not found"
-        echo ""; return 1
-    fi
-
-    printfc "$NORD_BLUE" "\n>Wallpapers"
-    if git -C "$WALLPAPERS_DIR" pull --rebase --autostash; then
-        printfc "$NORD_GREEN" "Pulled updates"
-    else
-        printfc "$NORD_RED" "Failed to pull updates"
-    fi
-    echo ""
 }
 
 sys
