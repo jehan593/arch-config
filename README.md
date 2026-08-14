@@ -77,8 +77,8 @@ missing.
 | `upp [-all]` | Upgrade packages (fzf-select a repo, or `-all` for everything) |
 | `upc` | Pull the latest arch-config from git |
 | `upf` | Refresh Firefox prefs from Betterfox + local overrides |
-| `upwp` | Pull the latest wallpapers |
-| `upall` | Runs `upp -all`, `upf`, `upwp`, `upc` together |
+| `uprep` | Pull updates for all cloned repos (stashes local changes) |
+| `upall` | Runs `upp -all`, `upf`, `uprep`, `upc` together |
 | `inst` / `inst -refresh` | fzf package installer (Pacman + AUR) |
 | `uinst` | fzf package remover, flags explicitly-installed packages |
 | `cleanup` | Clears pacman/AUR caches, trash, and stale history files |

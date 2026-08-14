@@ -15,6 +15,7 @@ fi
 source "$ARCH_CONFIG_PATH/helpers/colors-nord.sh"
 source "$ARCH_CONFIG_PATH/helpers/printer.sh"
 source "$ARCH_CONFIG_PATH/helpers/dep-checker.sh"
+source "$ARCH_CONFIG_PATH/helpers/repo-list.sh"
 
 if ! _test_dependencies fzf yay git curl xclip checkupdates paccache reflector xdg-open; then
     PS1='[\u@\h \W]\$ '
@@ -406,8 +407,32 @@ upc() {
     fi
 }
 
+uprep() {
+    printfc "$NORD_BLUE" "\n>Repo Sync"
+    local found=false
+    for entry in "${CLONE_REPOS[@]}"; do
+        IFS='|' read -r repo_url repo_dest <<< "$entry"
+        local repo_path="${repo_dest/#\~/$HOME}"
+        local repo_name="${repo_url##*/}"
+        repo_name="${repo_name%.git}"
+        repo_path="$repo_path/$repo_name"
+
+        if [[ -d "$repo_path/.git" ]]; then
+            found=true
+            printfc "$NORD_YELLOW" "Pulling %s..." "$repo_name"
+            if git -C "$repo_path" pull --rebase --autostash; then
+                printfc "$NORD_GREEN" "Updated %s" "$repo_name"
+            else
+                printfc "$NORD_RED" "Failed to update %s." "$repo_name"
+            fi
+        fi
+    done
+    [[ "$found" = false ]] && printfc "$NORD_YELLOW" "No cloned repos found — run setup.sh to clone them."
+    echo ""
+}
+
 upall() {
-    upp && upf && upc
+    upp && upf && uprep && upc
 }
 
 upp() {
