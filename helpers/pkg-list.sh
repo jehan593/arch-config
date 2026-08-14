@@ -7,7 +7,7 @@ DEPENDENCIES=(
     "starship" "fzf" "zoxide"
     "mpv" "xclip" "neovim"
     "reflector" "pacman-contrib" "git" "qview"
-    "tldr" "topgrade"
+    "tldr" "topgrade" "ripgrep"
 )
 
 THEME_PACKAGES=(

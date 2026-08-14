@@ -7,13 +7,3 @@ ask_retry = false
 no_self_update = false
 set_title = false
 disable = ["system"]
-
-
-[git]
-repos = [
-    "~/browser-extensions/*", 
-    "~/Pictures/my-wallpapers"
-]
-
-max_concurrency = 5
-arguments = "--rebase --autostash"  
