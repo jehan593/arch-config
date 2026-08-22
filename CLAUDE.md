@@ -39,7 +39,7 @@ There is no build step, package.json, or test suite. Verification is:
 
 Each script (`setup.sh`/`reset.sh`) defines its own version of these three callback functions right before invoking the walker — read both definitions together when changing install/uninstall behavior, since they're expected to mirror each other exactly (see "reset counterparts" convention below).
 
-**Printing.** One primitive, `printfc "$COLOR" "fmt" [args]` (or `printfc -n ...` for no trailing newline), defined in `helpers/printer.sh`. No `info`/`ok`/`err` wrapper functions — callers pass the color directly. Two separate color files, picked by lifecycle stage:
+**Printing.** One primitive, `printfc "$COLOR" "fmt" [args]` (or `printfc -n ...` for no trailing newline), defined in `helpers/printer.sh`. No `info`/`ok`/`err` wrapper functions — callers pass the color directly. Helpers themselves are print-free: they emit data on stdout and return status codes, and the entry point that sourced them owns all user-facing output. Two separate color files, picked by lifecycle stage:
 - `helpers/colors-standard.sh` (plain ANSI) — used only by `setup.sh`/`reset.sh`, which run *before* the Nord theme exists.
 - `helpers/colors-nord.sh` (Nord truecolor) — used by everything else (`tools/*.sh`, `home/.bashrc`).
 
@@ -58,4 +58,5 @@ Semantic mapping (don't invent a new category, e.g. a separate "info" color — 
 - **Executable bits are committed.** `tools/*.sh` must be `100755` in git, not just locally `chmod +x`'d — otherwise a fresh clone breaks the `/usr/local/bin` symlinks.
 - **sudo failure must not fall through.** Any function that shells out to `sudo` and has logic after the failure branch needs an explicit `return 1` on failure — otherwise stale/partial state below can print a contradicting success message (this has been a recurring real bug in `.bashrc` functions like `cup`/`upp`). Prefer `if cmd; then ... else ...; fi` over checking `$?` afterward.
 - **Color legibility**: use the normal-intensity 8-color ANSI codes or Nord truecolor as already defined, not bright-ANSI variants (`\e[90m`-`\e[97m`) or ad hoc truecolor — this repo's Nord palette is a deliberate exception already accounted for in `colors-nord.sh`, don't add more one-off hex escapes beside it.
+- **Helpers don't print.** Only entry points (`tools/*.sh`, `home/.bashrc`, `setup.sh`/`reset.sh`) produce user-facing output. A helper function returns data (echo to stdout) plus an exit status, and the caller formats/prints it — e.g. `_test_dependencies` echoes missing command names one per line and returns non-zero; each caller captures that and prints the `Missing dependency:` lines itself.
 - **Single source of truth**: a value needed by both a setup path and its reset counterpart (package lists, gsettings schema/key pairs, tool paths) lives once in a shared helper file both read, never duplicated.

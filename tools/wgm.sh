@@ -7,7 +7,12 @@ source "$ARCH_CONFIG_PATH/helpers/printer.sh"
 source "$ARCH_CONFIG_PATH/helpers/dep-checker.sh"
 source "$ARCH_CONFIG_PATH/helpers/wgm-helper.sh"
 
-_test_dependencies wg wg-quick fzf || exit 1
+missing_deps=$(_test_dependencies wg wg-quick fzf) || {
+    for dep in $missing_deps; do
+        printfc "$NORD_RED" "Missing dependency: %s" "$dep"
+    done
+    exit 1
+}
 
 if [ "$EUID" -ne 0 ]; then
     sudo -n true 2>/dev/null || printfc "$NORD_YELLOW" "Elevating permissions..."

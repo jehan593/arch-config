@@ -17,7 +17,11 @@ source "$ARCH_CONFIG_PATH/helpers/printer.sh"
 source "$ARCH_CONFIG_PATH/helpers/dep-checker.sh"
 source "$ARCH_CONFIG_PATH/helpers/repo-list.sh"
 
-if ! _test_dependencies fzf yay git curl xclip checkupdates paccache reflector xdg-open; then
+missing_deps=$(_test_dependencies fzf yay git curl xclip checkupdates paccache reflector xdg-open)
+if [[ -n "$missing_deps" ]]; then
+    for dep in $missing_deps; do
+        printfc "$NORD_RED" "Missing dependency: %s" "$dep"
+    done
     PS1='[\u@\h \W]\$ '
     return
 fi

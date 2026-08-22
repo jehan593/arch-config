@@ -6,7 +6,12 @@ source "$ARCH_CONFIG_PATH/helpers/colors-nord.sh"
 source "$ARCH_CONFIG_PATH/helpers/printer.sh"
 source "$ARCH_CONFIG_PATH/helpers/dep-checker.sh"
 
-_test_dependencies stty || exit 1
+missing_deps=$(_test_dependencies stty) || {
+    for dep in $missing_deps; do
+        printfc "$NORD_RED" "Missing dependency: %s" "$dep"
+    done
+    exit 1
+}
 
 declare -A DIGITS
 
