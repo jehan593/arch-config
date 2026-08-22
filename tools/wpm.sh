@@ -7,7 +7,12 @@ source "$ARCH_CONFIG_PATH/helpers/printer.sh"
 source "$ARCH_CONFIG_PATH/helpers/dep-checker.sh"
 source "$ARCH_CONFIG_PATH/helpers/wpm-helper.sh"
 
-_test_dependencies wireproxy ss fzf || exit 1
+missing_deps=$(_test_dependencies wireproxy ss fzf) || {
+    for dep in $missing_deps; do
+        printfc "$NORD_RED" "Missing dependency: %s" "$dep"
+    done
+    exit 1
+}
 
 BINARY_PATH="/usr/bin/wireproxy"
 
