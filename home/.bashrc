@@ -70,6 +70,7 @@ fzf_history() {
 bind -x '"\C-h": fzf_history'
 
 IDEAPAD_CONSERVATION="/sys/bus/platform/drivers/ideapad_acpi/VPC2004:00/conservation_mode"
+BETTERFOX_HASH_FILE="$HOME/.config/arch-config-files/firefox/betterfox_hash.txt"
 
 # Aliases
 alias ls='ls --color=auto -F'
@@ -211,6 +212,46 @@ cleanup() {
     echo ""
 }
 
+_build_betterfox_userjs() {
+    local out="$1" key
+    if ! curl -fsSL "https://raw.githubusercontent.com/yokoffing/Betterfox/main/user.js" -o "$out" &>/dev/null; then
+        return 1
+    fi
+    if [[ -f "$ARCH_CONFIG_PATH/data/firefox/user-removals.txt" ]]; then
+        while IFS= read -r key; do
+            [[ -z "$key" ]] && continue
+            sed -i "/user_pref(\"${key}\"/d" "$out"
+        done < "$ARCH_CONFIG_PATH/data/firefox/user-removals.txt"
+    fi
+    if [[ -f "$ARCH_CONFIG_PATH/data/firefox/user-overrides.js" ]]; then
+        printf '\n' >> "$out"
+        cat "$ARCH_CONFIG_PATH/data/firefox/user-overrides.js" >> "$out"
+    fi
+}
+
+_show_git_update_status() {
+    local repo_path="$1" label="$2" hint="$3" behind
+    if [[ ! -d "$repo_path/.git" ]]; then
+        printfc "$NORD_YELLOW" "%s not found" "$label"
+        return 0
+    fi
+    if ! git -C "$repo_path" fetch --quiet &>/dev/null; then
+        printfc "$NORD_RED" "%s fetch failed" "$label"
+        return 0
+    fi
+    if ! behind=$(git -C "$repo_path" rev-list --count 'HEAD..@{u}' 2>/dev/null); then
+        printfc "$NORD_YELLOW" "%s has no upstream branch" "$label"
+        return 0
+    fi
+    if (( behind > 0 )); then
+        local msg="$label $behind commit(s) behind"
+        [[ -n "$hint" ]] && msg="$msg, run '$hint'"
+        printfc "$NORD_YELLOW" "%s" "$msg"
+    else
+        printfc "$NORD_GREEN" "%s up to date" "$label"
+    fi
+}
+
 cup() {
     if ! sudo pacman -Sy --noconfirm &>/dev/null; then
         printfc "$NORD_RED" "Failed to sync package database"
@@ -218,6 +259,7 @@ cup() {
         return 1
     fi
     local any=false repo pkg line
+    local entry repo_url repo_dest repo_path repo_name
     local all_updates=$(checkupdates 2>/dev/null)
     local aur_updates=$(yay -Qua 2>/dev/null)
 
@@ -261,6 +303,34 @@ cup() {
     fi
 
     [[ "$any" == false ]] && printfc "$NORD_GREEN" "System is up to date"
+    echo ""
+
+    local bf_temp bf_new
+    bf_temp=$(mktemp)
+    printfc "$NORD_BLUE" "\n>Betterfox"
+    if _build_betterfox_userjs "$bf_temp"; then
+        bf_new=$(sha256sum "$bf_temp" | awk '{print $1}')
+        if [[ -f "$BETTERFOX_HASH_FILE" ]] && [[ "$(cat "$BETTERFOX_HASH_FILE")" == "$bf_new" ]]; then
+            printfc "$NORD_GREEN" "Up to date"
+        else
+            printfc "$NORD_YELLOW" "Update available, run 'upf'"
+        fi
+    else
+        printfc "$NORD_RED" "Check failed: could not download Betterfox"
+    fi
+    rm -f "$bf_temp"
+
+    printfc "$NORD_BLUE" "\n>Cloned Repos"
+    for entry in "${CLONE_REPOS[@]}"; do
+        IFS='|' read -r repo_url repo_dest <<< "$entry"
+        repo_path="${repo_dest/#\~/$HOME}"
+        repo_name="${repo_url##*/}"
+        repo_name="${repo_name%.git}"
+        _show_git_update_status "$repo_path/$repo_name" "$repo_name" "uprep"
+    done
+
+    printfc "$NORD_BLUE" "\n>Arch Config"
+    _show_git_update_status "$ARCH_CONFIG_PATH" "arch-config" "upc"
     echo ""
 }
 
@@ -349,51 +419,47 @@ uinst() {
 }
 
 upf() {
-    local URL="https://raw.githubusercontent.com/yokoffing/Betterfox/main/user.js"
     local FF_DIR="$HOME/.config/mozilla/firefox"
-    local REMOVALS="$ARCH_CONFIG_PATH/data/firefox/user-removals.txt"
-    local OVERRIDES="$ARCH_CONFIG_PATH/data/firefox/user-overrides.js"
-    local TEMP_FILE="/tmp/betterfox_user.js"
-    local key times_file profile_path
+    local temp_file new_hash times_file profile_path found=false
 
     printfc "$NORD_BLUE" "\n>Firefox Config"
 
-    if ! curl -fsSL "$URL" -o "$TEMP_FILE" &>/dev/null; then
+    temp_file=$(mktemp)
+    if [[ -z "$temp_file" ]] || ! _build_betterfox_userjs "$temp_file"; then
+        rm -f "$temp_file"
         printfc "$NORD_RED" "Failed to download Betterfox"
-        echo ""; return 1
+        echo ""
+        return 1
     fi
 
-    if [[ -f "$REMOVALS" ]]; then
-        while IFS= read -r key; do
-            [[ -z "$key" ]] && continue
-            sed -i "/user_pref(\"${key}\"/d" "$TEMP_FILE"
-        done < "$REMOVALS"
-        printfc "$NORD_GREEN" "Applied custom settings"
-    else
-        printfc "$NORD_YELLOW" "No custom settings file found"
+    new_hash=$(sha256sum "$temp_file" | awk '{print $1}')
+    if [[ -f "$BETTERFOX_HASH_FILE" ]] && [[ "$(cat "$BETTERFOX_HASH_FILE")" == "$new_hash" ]]; then
+        rm -f "$temp_file"
+        printfc "$NORD_GREEN" "Betterfox already up to date"
+        echo ""
+        return 0
     fi
 
-    if [[ -f "$OVERRIDES" ]]; then
-        printf '\n' >> "$TEMP_FILE"
-        cat "$OVERRIDES" >> "$TEMP_FILE"
-        printfc "$NORD_GREEN" "Applied overrides"
-    else
-        printfc "$NORD_YELLOW" "No overrides file found"
-    fi
-
-    local found=false
     while IFS= read -r times_file; do
         profile_path=$(dirname "$times_file")
-        if cp "$TEMP_FILE" "$profile_path/user.js"; then
+        if cp "$temp_file" "$profile_path/user.js"; then
             printfc "$NORD_GREEN" "Updated profile: %s" "$(basename "$profile_path")"
+            found=true
         else
             printfc "$NORD_RED" "Failed profile: %s" "$(basename "$profile_path")"
         fi
-        found=true
     done < <(find "$FF_DIR" -maxdepth 2 -mindepth 2 -name "times.json")
 
-    rm "$TEMP_FILE"
-    [[ "$found" = false ]] && printfc "$NORD_RED" "No Firefox profiles found"
+    rm -f "$temp_file"
+
+    if [[ "$found" == true ]]; then
+        mkdir -p "$(dirname "$BETTERFOX_HASH_FILE")"
+        printf '%s' "$new_hash" > "$BETTERFOX_HASH_FILE"
+    else
+        printfc "$NORD_RED" "No Firefox profiles found"
+        echo ""
+        return 1
+    fi
     echo ""
 }
 
