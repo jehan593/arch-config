@@ -73,10 +73,10 @@ missing.
 | Command | Purpose |
 |---|---|
 | `sys` | Uptime, kernel, package count, memory, OS age, battery |
-| `cup` | List available pacman/AUR updates, grouped by repo |
+| `cup` | Check for updates: pacman/AUR packages, Betterfox, cloned repos, this config |
 | `upp [-all]` | Upgrade packages (fzf-select a repo, or `-all` for everything) |
 | `upc` | Pull the latest arch-config from git |
-| `upf` | Refresh Firefox prefs from Betterfox + local overrides |
+| `upf` | Refresh Firefox prefs from Betterfox + local overrides (skips if unchanged) |
 | `uprep` | Pull updates for all cloned repos (stashes local changes) |
 | `upall` | Runs `upp -all`, `upf`, `uprep`, `upc` together |
 | `inst` / `inst -refresh` | fzf package installer (Pacman + AUR) |
