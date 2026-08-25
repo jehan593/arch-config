@@ -129,7 +129,22 @@ fi
 echo ""
 
 # ==============================================================================
-# 6. REMOVE PACMAN CANDY
+# 6. REMOVE SUDOERS pwfeedback
+# ==============================================================================
+
+printfc "$BLUE" "\n>Sudoers pwfeedback"
+
+SUDOERS_PWFEEDBACK="/etc/sudoers.d/pwfeedback"
+if [[ -f "$SUDOERS_PWFEEDBACK" ]]; then
+    sudo rm -f "$SUDOERS_PWFEEDBACK"
+    printfc "$GREEN" "Removed sudoers pwfeedback."
+else
+    printfc "$YELLOW" "Sudoers pwfeedback not found, skipping."
+fi
+echo ""
+
+# ==============================================================================
+# 7. REMOVE PACMAN CANDY
 # ==============================================================================
 
 printfc "$BLUE" "\n>Pacman Config"
@@ -143,7 +158,7 @@ fi
 echo ""
 
 # ==============================================================================
-# 7. STOP AND REMOVE wgm
+# 8. STOP AND REMOVE wgm
 # ==============================================================================
 
 printfc "$BLUE" "\n>wgm / WARP"
@@ -185,7 +200,7 @@ sudo test -d "$WGM_ROOT" && sudo rm -rf "$WGM_ROOT" && printfc "$GREEN" "Removed
 echo ""
 
 # ==============================================================================
-# 8. REMOVE wpm TUNNELS
+# 9. REMOVE wpm TUNNELS
 # ==============================================================================
 
 printfc "$BLUE" "\n>wpm"
@@ -232,7 +247,7 @@ fi
 echo ""
 
 # ==============================================================================
-# 9. REMOVE CHAOTIC-AUR
+# 10. REMOVE CHAOTIC-AUR
 # ==============================================================================
 
 printfc "$BLUE" "\n>Chaotic-AUR"
@@ -248,7 +263,7 @@ fi
 echo ""
 
 # ==============================================================================
-# 10. REMOVE CLONED REPOS
+# 11. REMOVE CLONED REPOS
 # ==============================================================================
 
 printfc "$BLUE" "\n>Cloned Repos"
@@ -276,7 +291,7 @@ done
 echo ""
 
 # ==============================================================================
-# 11. RESTORE THEME & FONT DEFAULTS
+# 12. RESTORE THEME & FONT DEFAULTS
 # ==============================================================================
 
 printfc "$BLUE" "\n>Restoring Theme & Font Defaults"
@@ -290,7 +305,7 @@ done
 echo ""
 
 # ==============================================================================
-# 12. OPTIONAL PACKAGE REMOVAL
+# 13. OPTIONAL PACKAGE REMOVAL
 # ==============================================================================
 
 printfc "$BLUE" "\n>Optional: Package Removal"

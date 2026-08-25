@@ -204,7 +204,30 @@ fi
 echo ""
 
 # ==============================================================================
-# 10. PACMAN CONFIGURATION
+# 10. SUDOERS pwfeedback
+# ==============================================================================
+
+printfc "$BLUE" "\n>Sudoers pwfeedback"
+
+SUDOERS_PWFEEDBACK="/etc/sudoers.d/pwfeedback"
+if [[ ! -f "$SUDOERS_PWFEEDBACK" ]]; then
+    SUDOERS_PWFEEDBACK_TMP="${SUDOERS_PWFEEDBACK}.tmp"
+    echo 'Defaults pwfeedback' | sudo tee "$SUDOERS_PWFEEDBACK_TMP" > /dev/null
+    if sudo visudo -c -f "$SUDOERS_PWFEEDBACK_TMP" &>/dev/null; then
+        sudo mv "$SUDOERS_PWFEEDBACK_TMP" "$SUDOERS_PWFEEDBACK"
+        sudo chmod 440 "$SUDOERS_PWFEEDBACK"
+        printfc "$GREEN" "Sudoers pwfeedback enabled."
+    else
+        sudo rm -f "$SUDOERS_PWFEEDBACK_TMP"
+        printfc "$RED" "Sudoers validation failed — skipping pwfeedback."
+    fi
+else
+    printfc "$GREEN" "Sudoers pwfeedback already exists."
+fi
+echo ""
+
+# ==============================================================================
+# 11. PACMAN CONFIGURATION
 # ==============================================================================
 
 printfc "$BLUE" "\n>Pacman Configuration"
@@ -219,7 +242,7 @@ fi
 echo ""
 
 # ==============================================================================
-# 11. CLONE REPOS
+# 12. CLONE REPOS
 # ==============================================================================
 
 printfc "$BLUE" "\n>Cloning Repos"
@@ -247,7 +270,7 @@ done
 echo ""
 
 # ==============================================================================
-# 12. THEMES
+# 13. THEMES
 # ==============================================================================
 
 printfc "$BLUE" "\n>Installing Themes"
@@ -285,7 +308,7 @@ fi
 echo ""
 
 # ==============================================================================
-# 13. APPLY THEME & FONT SETTINGS
+# 14. APPLY THEME & FONT SETTINGS
 # ==============================================================================
 
 printfc "$BLUE" "\n>Applying Theme & Font Settings"
