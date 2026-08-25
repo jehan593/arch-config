@@ -209,7 +209,6 @@ cleanup() {
     fi
 
     printfc "$NORD_SNOW_1" "Remaining cache: %s" "$(du -sh /var/cache/pacman/pkg/ 2>/dev/null | cut -f1)"
-    echo ""
 }
 
 _build_betterfox_userjs() {
@@ -300,11 +299,9 @@ cup() {
                 printfc "$NORD_YELLOW" " %-35s %s" "$pkg" "$ver"
             done
         fi
-        echo ""
     fi
 
     [[ "$any" == false ]] && { printfc "$NORD_BLUE" "\n>Packages"; printfc "$NORD_GREEN" "Up to date"; }
-    echo ""
 
     local bf_temp bf_new
     bf_temp=$(mktemp)
@@ -332,7 +329,6 @@ cup() {
 
     printfc "$NORD_BLUE" "\n>Arch Config"
     _show_git_update_status "$ARCH_CONFIG_PATH" "arch-config" "upc"
-    echo ""
 }
 
 _record_history() {
@@ -353,7 +349,6 @@ inst() {
         printfc "$NORD_BLUE" "\n>Installing"
         yay -S "$@"
         _record_history "yay -S $*"
-        echo ""
     else
         local cache="$HOME/.config/arch-config-files/inst/pkg-list.cache"
         if [[ ! -f "$cache" ]] || [[ -n $(find "$cache" -mmin +10080 2>/dev/null) ]]; then
@@ -403,7 +398,6 @@ uinst() {
         printfc "$NORD_BLUE" "\n>Uninstalling"
         sudo pacman -Rns "$@"
         _record_history "sudo pacman -Rns $*"
-        echo ""
     else
         local selected
         selected=$(_pkg_list | fzf --multi \
@@ -429,7 +423,6 @@ upf() {
     if [[ -z "$temp_file" ]] || ! _build_betterfox_userjs "$temp_file"; then
         rm -f "$temp_file"
         printfc "$NORD_RED" "Failed to download Betterfox"
-        echo ""
         return 1
     fi
 
@@ -437,7 +430,6 @@ upf() {
     if [[ -f "$BETTERFOX_HASH_FILE" ]] && [[ "$(cat "$BETTERFOX_HASH_FILE")" == "$new_hash" ]]; then
         rm -f "$temp_file"
         printfc "$NORD_GREEN" "Betterfox already up to date"
-        echo ""
         return 0
     fi
 
@@ -458,10 +450,8 @@ upf() {
         printf '%s' "$new_hash" > "$BETTERFOX_HASH_FILE"
     else
         printfc "$NORD_RED" "No Firefox profiles found"
-        echo ""
         return 1
     fi
-    echo ""
 }
 
 upc() {
@@ -470,10 +460,8 @@ upc() {
         printfc "$NORD_GREEN" "Config synced"
         echo ""
         printfc "$NORD_YELLOW" "run 'reload' to apply changes"
-        echo ""
     else
         printfc "$NORD_RED" "Sync failed"
-        echo ""
         return 1
     fi
 }
@@ -499,7 +487,6 @@ uprep() {
         fi
     done
     [[ "$found" = false ]] && printfc "$NORD_YELLOW" "No cloned repos found — run setup.sh to clone them."
-    echo ""
 }
 
 upall() {
@@ -529,7 +516,6 @@ up-mirrors() {
     else
         printfc "$NORD_RED" "Failed to update mirrors"
     fi
-    echo ""
 }
 
 open() {
@@ -547,7 +533,6 @@ sz() {
     local size=$(du -sh "$target" 2>/dev/null | cut -f1)
     printfc "$NORD_BLUE" "\n>Disk Usage"
     printfc "$NORD_SNOW_1" "%s: %s" "$target" "$size"
-    echo ""
 }
 
 trash() {

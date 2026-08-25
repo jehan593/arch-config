@@ -123,8 +123,6 @@ UNIT
     else
         printfc "$NORD_RED" "Failed to start service"
     fi
-
-    echo ""
 }
 
 wpm_ls() {
@@ -135,7 +133,7 @@ wpm_ls() {
 
     if [[ ${#services[@]} -eq 0 ]]; then
         printfc "$NORD_RED" "No tunnels found"
-        echo ""; return
+        return
     fi
 
     printfc "$NORD_SNOW_1" "%-25s %-12s %-10s" "SERVICE" "STATUS" "PORT"
@@ -187,7 +185,7 @@ _wpm_pick_tunnels() {
 
 wpm_rm() {
     printfc "$NORD_BLUE" "\n>Uninstall Tunnel"
-    _wpm_pick_tunnels "Uninstall" || { echo ""; return; }
+    _wpm_pick_tunnels "Uninstall" || { return; }
     local to_remove=("${WPM_PICKED[@]}") service
 
     echo ""
@@ -223,7 +221,7 @@ _wpm_bulk_action() {
     local verb="$1" header_text="$2" past_tense="$3" prompt="$4"
 
     printfc "$NORD_BLUE" "\n>%s" "$header_text"
-    _wpm_pick_tunnels "$prompt" || { echo ""; return; }
+    _wpm_pick_tunnels "$prompt" || { return; }
 
     local service
     for service in "${WPM_PICKED[@]}"; do
@@ -251,7 +249,7 @@ case "$1" in
     stop)    wpm_stop ;;
     restart) wpm_restart ;;
     *)
-        printfc "$NORD_BLUE" "\n>wpm Manager\n"
+        printfc "$NORD_BLUE" "\n>wpm Manager"
         printfc "$NORD_SNOW_1" "add <name> <conf> <port>     Install tunnel"
         printfc "$NORD_SNOW_1" "ls                           List tunnels"
         printfc "$NORD_SNOW_1" "rm                           Uninstall tunnels"
