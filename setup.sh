@@ -25,7 +25,7 @@ printfc "$CYAN" "└────────────────────
 # 0. PREREQUISITES CHECK
 # ==============================================================================
 
-printfc "$BLUE" "\n>Pre-flight Checks"
+printfc "$BLUE" "\n>Pre-flight Checks\n"
 
 if [[ "$EUID" -eq 0 ]]; then
     printfc "$RED" "Do not run this script as root."
@@ -39,33 +39,29 @@ if [[ ! -d "$DOTDIR/tools" ]]; then
     exit 1
 fi
 printfc "$GREEN" "arch-config found at %s" "$DOTDIR"
-echo ""
 
-printfc "$BLUE" "\n>Sudo Authentication"
+printfc "$BLUE" "\n>Sudo Authentication\n"
 sudo -v || { printfc "$RED" "Sudo authentication failed."; exit 1; }
 printfc "$GREEN" "Sudo authenticated."
-echo ""
 
 # ==============================================================================
 # 1. ENVIRONMENT VARIABLE
 # ==============================================================================
 
-printfc "$BLUE" "\n>Environment Variable"
+printfc "$BLUE" "\n>Environment Variable\n"
 
 echo "export ARCH_CONFIG_PATH=\"$DOTDIR\"" | sudo tee /etc/profile.d/arch-config.sh > /dev/null
 sudo chmod 644 /etc/profile.d/arch-config.sh
 printfc "$GREEN" "ARCH_CONFIG_PATH set to %s" "$DOTDIR"
-echo ""
 
 # ==============================================================================
 # 2. USER CONFIG DIRECTORY
 # ==============================================================================
 
-printfc "$BLUE" "\n>User Config Directory"
+printfc "$BLUE" "\n>User Config Directory\n"
 
 mkdir -p "$HOME/.config/arch-config-files"
 printfc "$GREEN" "Created ~/.config/arch-config-files (owned by %s)" "$USER"
-echo ""
 
 # ==============================================================================
 # 3. HOME FILES
@@ -87,7 +83,6 @@ _home_file_action() {
     printfc "$GREEN" "Linked %s" "${target/#$HOME/\~}"
 }
 _each_home_file
-echo ""
 
 # ==============================================================================
 # 4. TOOLS
@@ -102,7 +97,6 @@ _tool_file_action() {
     printfc "$GREEN" "%s linked to /usr/local/bin/%s" "$name" "$name"
 }
 _each_tool_file
-echo ""
 
 # ==============================================================================
 # 5. ETC FILES
@@ -119,13 +113,12 @@ _etc_file_action() {
     printfc "$GREEN" "Installed policy: %s" "$dest"
 }
 _each_etc_file
-echo ""
 
 # ==============================================================================
 # 6. AUR HELPER (yay)
 # ==============================================================================
 
-printfc "$BLUE" "\n>AUR Helper (yay)"
+printfc "$BLUE" "\n>AUR Helper (yay)\n"
 
 if ! command -v yay &>/dev/null; then
     printfc "$YELLOW" "Installing yay..."
@@ -138,13 +131,12 @@ if ! command -v yay &>/dev/null; then
 else
     printfc "$GREEN" "yay already installed."
 fi
-echo ""
 
 # ==============================================================================
 # 7. CHAOTIC-AUR
 # ==============================================================================
 
-printfc "$BLUE" "\n>Chaotic-AUR"
+printfc "$BLUE" "\n>Chaotic-AUR\n"
 
 if ! grep -q "\[chaotic-aur\]" /etc/pacman.conf; then
     printfc "$YELLOW" "Adding Chaotic-AUR keyring and mirrorlist..."
@@ -158,7 +150,6 @@ if ! grep -q "\[chaotic-aur\]" /etc/pacman.conf; then
 else
     printfc "$GREEN" "Chaotic-AUR already configured."
 fi
-echo ""
 
 # ==============================================================================
 # 8. DEPENDENCIES
@@ -178,13 +169,12 @@ printfc "$YELLOW" "Updating tldr pages..."
 tldr --update \
     && printfc "$GREEN" "tldr pages updated." \
     || printfc "$RED" "Failed to update tldr pages."
-echo ""
 
 # ==============================================================================
 # 9. PASSWORDLESS updatedb
 # ==============================================================================
 
-printfc "$BLUE" "\n>Passwordless updatedb"
+printfc "$BLUE" "\n>Passwordless updatedb\n"
 
 SUDOERS_FILE="/etc/sudoers.d/updatedb-nopasswd"
 if [[ ! -f "$SUDOERS_FILE" ]]; then
@@ -201,13 +191,12 @@ if [[ ! -f "$SUDOERS_FILE" ]]; then
 else
     printfc "$GREEN" "Sudoers rule already exists."
 fi
-echo ""
 
 # ==============================================================================
 # 10. SUDOERS pwfeedback
 # ==============================================================================
 
-printfc "$BLUE" "\n>Sudoers pwfeedback"
+printfc "$BLUE" "\n>Sudoers pwfeedback\n"
 
 SUDOERS_PWFEEDBACK="/etc/sudoers.d/pwfeedback"
 if [[ ! -f "$SUDOERS_PWFEEDBACK" ]]; then
@@ -224,13 +213,12 @@ if [[ ! -f "$SUDOERS_PWFEEDBACK" ]]; then
 else
     printfc "$GREEN" "Sudoers pwfeedback already exists."
 fi
-echo ""
 
 # ==============================================================================
 # 11. PACMAN CONFIGURATION
 # ==============================================================================
 
-printfc "$BLUE" "\n>Pacman Configuration"
+printfc "$BLUE" "\n>Pacman Configuration\n"
 
 if ! grep -q "ILoveCandy" /etc/pacman.conf; then
     sudo sed -i 's/^#Color/Color/' /etc/pacman.conf
@@ -239,13 +227,12 @@ if ! grep -q "ILoveCandy" /etc/pacman.conf; then
 else
     printfc "$GREEN" "ILoveCandy already set."
 fi
-echo ""
 
 # ==============================================================================
 # 12. CLONE REPOS
 # ==============================================================================
 
-printfc "$BLUE" "\n>Cloning Repos"
+printfc "$BLUE" "\n>Cloning Repos\n"
 
 for entry in "${CLONE_REPOS[@]}"; do
     IFS='|' read -r repo_url repo_dest <<< "$entry"
@@ -267,13 +254,12 @@ for entry in "${CLONE_REPOS[@]}"; do
         fi
     fi
 done
-echo ""
 
 # ==============================================================================
 # 13. THEMES
 # ==============================================================================
 
-printfc "$BLUE" "\n>Installing Themes"
+printfc "$BLUE" "\n>Installing Themes\n"
 
 yay -S --noconfirm --needed "${THEME_PACKAGES[@]}" \
     && printfc "$GREEN" "Theme packages installed." \
@@ -305,13 +291,12 @@ if git clone https://github.com/Adapta-Projects/Papirus-Nord "$PAPIRUS_NORD_DIR"
 else
     printfc "$RED" "Failed to clone Papirus-Nord repo."
 fi
-echo ""
 
 # ==============================================================================
 # 14. APPLY THEME & FONT SETTINGS
 # ==============================================================================
 
-printfc "$BLUE" "\n>Applying Theme & Font Settings"
+printfc "$BLUE" "\n>Applying Theme & Font Settings\n"
 
 for entry in "${THEME_SETTINGS[@]}"; do
     IFS='|' read -r schema key value <<< "$entry"
@@ -319,7 +304,6 @@ for entry in "${THEME_SETTINGS[@]}"; do
         && printfc "$GREEN" "%s %s -> %s" "$schema" "$key" "$value" \
         || printfc "$RED" "Failed to set %s %s" "$schema" "$key"
 done
-echo ""
 
 # ==============================================================================
 # DONE
@@ -327,4 +311,3 @@ echo ""
 
 printfc "$GREEN" "Setup complete! Restart your shell."
 printfc "$YELLOW" "Run: source ~/.bashrc"
-echo ""

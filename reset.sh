@@ -29,17 +29,15 @@ printfc "$YELLOW" "This will UNDO everything setup.sh configured."
 printfc -n "$YELLOW" "Are you sure you want to reset? [y/N]: "
 read -r confirm
 [[ "$confirm" =~ ^[Yy]$ ]] || { echo -e "\nAborted.\n"; exit 0; }
-echo ""
 
 sudo -v || { printfc "$RED" "Sudo authentication failed."; exit 1; }
 printfc "$GREEN" "Sudo authenticated."
-echo ""
 
 # ==============================================================================
 # 1. ENVIRONMENT VARIABLE
 # ==============================================================================
 
-printfc "$BLUE" "\n>Environment Variable"
+printfc "$BLUE" "\n>Environment Variable\n"
 
 if [[ -f "/etc/profile.d/arch-config.sh" ]]; then
     sudo rm -f /etc/profile.d/arch-config.sh
@@ -47,7 +45,6 @@ if [[ -f "/etc/profile.d/arch-config.sh" ]]; then
 else
     printfc "$YELLOW" "ARCH_CONFIG_PATH file not found, skipping."
 fi
-echo ""
 
 # ==============================================================================
 # 2. HOME FILES
@@ -75,7 +72,6 @@ _home_file_action() {
     fi
 }
 _each_home_file
-echo ""
 
 # ==============================================================================
 # 3. TOOLS
@@ -93,7 +89,6 @@ _tool_file_action() {
     fi
 }
 _each_tool_file
-echo ""
 
 # ==============================================================================
 # 4. ETC FILES
@@ -111,13 +106,12 @@ _etc_file_action() {
     fi
 }
 _each_etc_file
-echo ""
 
 # ==============================================================================
 # 5. REMOVE SUDOERS RULE
 # ==============================================================================
 
-printfc "$BLUE" "\n>Passwordless updatedb"
+printfc "$BLUE" "\n>Passwordless updatedb\n"
 
 SUDOERS_FILE="/etc/sudoers.d/updatedb-nopasswd"
 if [[ -f "$SUDOERS_FILE" ]]; then
@@ -126,13 +120,12 @@ if [[ -f "$SUDOERS_FILE" ]]; then
 else
     printfc "$YELLOW" "Sudoers rule not found, skipping."
 fi
-echo ""
 
 # ==============================================================================
 # 6. REMOVE SUDOERS pwfeedback
 # ==============================================================================
 
-printfc "$BLUE" "\n>Sudoers pwfeedback"
+printfc "$BLUE" "\n>Sudoers pwfeedback\n"
 
 SUDOERS_PWFEEDBACK="/etc/sudoers.d/pwfeedback"
 if [[ -f "$SUDOERS_PWFEEDBACK" ]]; then
@@ -141,13 +134,12 @@ if [[ -f "$SUDOERS_PWFEEDBACK" ]]; then
 else
     printfc "$YELLOW" "Sudoers pwfeedback not found, skipping."
 fi
-echo ""
 
 # ==============================================================================
 # 7. REMOVE PACMAN CANDY
 # ==============================================================================
 
-printfc "$BLUE" "\n>Pacman Config"
+printfc "$BLUE" "\n>Pacman Config\n"
 
 if grep -q "ILoveCandy" /etc/pacman.conf; then
     sudo sed -i '/^ILoveCandy/d' /etc/pacman.conf
@@ -155,13 +147,12 @@ if grep -q "ILoveCandy" /etc/pacman.conf; then
 else
     printfc "$YELLOW" "ILoveCandy not found, skipping."
 fi
-echo ""
 
 # ==============================================================================
 # 8. STOP AND REMOVE wgm
 # ==============================================================================
 
-printfc "$BLUE" "\n>wgm / WARP"
+printfc "$BLUE" "\n>wgm / WARP\n"
 
 source "$DOTDIR/helpers/wgm-helper.sh"
 _wgm_set_paths "$HOME"
@@ -197,13 +188,12 @@ if sudo test -d "$CONFIGS_DIR"; then
 fi
 
 sudo test -d "$WGM_ROOT" && sudo rm -rf "$WGM_ROOT" && printfc "$GREEN" "Removed ~/.config/arch-config-files/wgm"
-echo ""
 
 # ==============================================================================
 # 9. REMOVE wpm TUNNELS
 # ==============================================================================
 
-printfc "$BLUE" "\n>wpm"
+printfc "$BLUE" "\n>wpm\n"
 
 shopt -s nullglob
 services=(/etc/systemd/system/*-wpm.service)
@@ -244,13 +234,12 @@ if [[ ${#services[@]} -gt 0 ]]; then
 else
     printfc "$YELLOW" "No wpm tunnels found, skipping."
 fi
-echo ""
 
 # ==============================================================================
 # 10. REMOVE CHAOTIC-AUR
 # ==============================================================================
 
-printfc "$BLUE" "\n>Chaotic-AUR"
+printfc "$BLUE" "\n>Chaotic-AUR\n"
 
 if grep -q "\[chaotic-aur\]" /etc/pacman.conf; then
     sudo sed -i '/\[chaotic-aur\]/,/Include.*chaotic-mirrorlist/d' /etc/pacman.conf
@@ -260,13 +249,12 @@ if grep -q "\[chaotic-aur\]" /etc/pacman.conf; then
 else
     printfc "$YELLOW" "Chaotic-AUR not configured, skipping."
 fi
-echo ""
 
 # ==============================================================================
 # 11. REMOVE CLONED REPOS
 # ==============================================================================
 
-printfc "$BLUE" "\n>Cloned Repos"
+printfc "$BLUE" "\n>Cloned Repos\n"
 
 for entry in "${CLONE_REPOS[@]}"; do
     IFS='|' read -r repo_url repo_dest _ <<< "$entry"
@@ -288,13 +276,12 @@ for entry in "${CLONE_REPOS[@]}"; do
         printfc "$YELLOW" "%s not found, skipping." "$repo_name"
     fi
 done
-echo ""
 
 # ==============================================================================
 # 12. RESTORE THEME & FONT DEFAULTS
 # ==============================================================================
 
-printfc "$BLUE" "\n>Restoring Theme & Font Defaults"
+printfc "$BLUE" "\n>Restoring Theme & Font Defaults\n"
 
 for entry in "${THEME_SETTINGS[@]}"; do
     IFS='|' read -r schema key _ <<< "$entry"
@@ -302,13 +289,12 @@ for entry in "${THEME_SETTINGS[@]}"; do
         && printfc "$GREEN" "Reset %s %s" "$schema" "$key" \
         || printfc "$RED" "Failed to reset %s %s" "$schema" "$key"
 done
-echo ""
 
 # ==============================================================================
 # 13. OPTIONAL PACKAGE REMOVAL
 # ==============================================================================
 
-printfc "$BLUE" "\n>Optional: Package Removal"
+printfc "$BLUE" "\n>Optional: Package Removal\n"
 
 printfc "$YELLOW" "Packages installed by setup.sh — remove manually if you no longer use them:"
 for pkg in "${DEPENDENCIES[@]}"; do
@@ -321,7 +307,6 @@ done
 for pkg in "${THEME_PACKAGES[@]}"; do
     printfc "$YELLOW" "  %s" "$pkg"
 done
-echo ""
 
 # ==============================================================================
 # DONE
@@ -329,4 +314,3 @@ echo ""
 
 printfc "$GREEN" "Reset complete! Open a new terminal session."
 printfc "$YELLOW" "Your dotfiles repository remains intact."
-echo ""

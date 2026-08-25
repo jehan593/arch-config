@@ -144,7 +144,6 @@ wgm_on() {
     else
         printfc "$NORD_RED" "Connection failed"
     fi
-    echo ""
 }
 
 wgm_off() {
@@ -164,7 +163,6 @@ wgm_off() {
     else
         printfc "$NORD_RED" "Disconnect failed"
     fi
-    echo ""
 }
 
 wgm_add() {
@@ -197,7 +195,6 @@ wgm_add() {
     sed -i '/^DNS/d' "$dest"
     printfc "$NORD_GREEN" "Profile added"
     printfc "$NORD_SNOW_1" "Path: %s" "$dest"
-    echo ""
 }
 
 wgm_rm() {
@@ -239,7 +236,6 @@ wgm_rm() {
     rm -f "$target"
     printfc "$NORD_GREEN" "Profile removed"
     printfc "$NORD_GREEN" "Backup: %s" "$backup_file"
-    echo ""
 }
 
 wgm_ls() {
@@ -306,7 +302,7 @@ case "$1" in
     ls)     wgm_ls ;;
     status) wgm_status ;;
     *)
-        printfc "$NORD_BLUE" "\n>wgm Manager\n"
+        printfc "$NORD_BLUE" "\n>wgm Manager"
         printfc "$NORD_SNOW_1" "on       Connect"
         printfc "$NORD_SNOW_1" "off      Disconnect"
         printfc "$NORD_SNOW_1" "add      Add profile"
