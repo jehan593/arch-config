@@ -263,46 +263,47 @@ cup() {
     local all_updates=$(checkupdates 2>/dev/null)
     local aur_updates=$(yay -Qua 2>/dev/null)
 
-    if [[ -n "$all_updates" ]]; then
-        local pkgs=($(echo "$all_updates" | awk '{print $1}'))
-        declare -A pkg_repo
-        while read -r repo pkg; do
-            pkg_repo["$pkg"]="$repo"
-        done < <(pacman -Sp --print-format '%r %n' "${pkgs[@]}" 2>/dev/null)
+    if [[ -n "$all_updates" ]] || [[ -n "$aur_updates" ]]; then
+        printfc "$NORD_BLUE" "\n>Packages"
+        if [[ -n "$all_updates" ]]; then
+            local pkgs=($(echo "$all_updates" | awk '{print $1}'))
+            declare -A pkg_repo
+            while read -r repo pkg; do
+                pkg_repo["$pkg"]="$repo"
+            done < <(pacman -Sp --print-format '%r %n' "${pkgs[@]}" 2>/dev/null)
 
-        declare -A repo_updates
-        while IFS= read -r line; do
-            pkg=$(echo "$line" | awk '{print $1}')
-            repo="${pkg_repo[$pkg]}"
-            [[ -z "$repo" ]] && continue
-            repo_updates["$repo"]+="$line"$'\n'
-        done <<< "$all_updates"
-
-        for repo in $(echo "${!repo_updates[@]}" | tr ' ' '\n' | sort); do
-            any=true
-            printfc "$NORD_BLUE" "\n>%s" "$repo"
+            declare -A repo_updates
             while IFS= read -r line; do
-                [[ -z "$line" ]] && continue
+                pkg=$(echo "$line" | awk '{print $1}')
+                repo="${pkg_repo[$pkg]}"
+                [[ -z "$repo" ]] && continue
+                repo_updates["$repo"]+="$line"$'\n'
+            done <<< "$all_updates"
+
+            for repo in $(echo "${!repo_updates[@]}" | tr ' ' '\n' | sort); do
+                any=true
+                printfc "$NORD_SNOW_1" " >%s" "$repo"
+                while IFS= read -r line; do
+                    [[ -z "$line" ]] && continue
+                    local pkg=$(awk '{print $1}' <<< "$line")
+                    local ver=$(awk '{$1=""; print $0}' <<< "$line" | xargs)
+                    printfc "$NORD_YELLOW" " %-35s %s" "$pkg" "$ver"
+                done <<< "${repo_updates[$repo]}"
+            done
+        fi
+        if [[ -n "$aur_updates" ]]; then
+            any=true
+            printfc "$NORD_SNOW_1" " >AUR"
+            echo "$aur_updates" | while read -r line; do
                 local pkg=$(awk '{print $1}' <<< "$line")
                 local ver=$(awk '{$1=""; print $0}' <<< "$line" | xargs)
-                printfc "$NORD_GREEN" "%-35s %s" "$pkg" "$ver"
-            done <<< "${repo_updates[$repo]}"
-            echo ""
-        done
-    fi
-
-    if [[ -n "$aur_updates" ]]; then
-        any=true
-        printfc "$NORD_BLUE" "\n>AUR"
-        echo "$aur_updates" | while read -r line; do
-            local pkg=$(awk '{print $1}' <<< "$line")
-            local ver=$(awk '{$1=""; print $0}' <<< "$line" | xargs)
-            printfc "$NORD_GREEN" "%-35s %s" "$pkg" "$ver"
-        done
+                printfc "$NORD_YELLOW" " %-35s %s" "$pkg" "$ver"
+            done
+        fi
         echo ""
     fi
 
-    [[ "$any" == false ]] && printfc "$NORD_GREEN" "System is up to date"
+    [[ "$any" == false ]] && { printfc "$NORD_BLUE" "\n>Packages"; printfc "$NORD_GREEN" "Up to date"; }
     echo ""
 
     local bf_temp bf_new
