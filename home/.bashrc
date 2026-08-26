@@ -257,7 +257,7 @@ cup() {
         echo ""
         return 1
     fi
-    local any=false repo pkg line
+    local any=false count=0 repo pkg line
     local entry repo_url repo_dest repo_path repo_name
     local all_updates=$(checkupdates 2>/dev/null)
     local aur_updates=$(yay -Qua 2>/dev/null)
@@ -279,29 +279,41 @@ cup() {
                 repo_updates["$repo"]+="$line"$'\n'
             done <<< "$all_updates"
 
-            for repo in $(echo "${!repo_updates[@]}" | tr ' ' '\n' | sort); do
+            local sorted_repos=($(echo "${!repo_updates[@]}" | tr ' ' '\n' | sort))
+            local ri
+            for ri in "${!sorted_repos[@]}"; do
+                repo="${sorted_repos[$ri]}"
                 any=true
+                [[ "$ri" -gt 0 ]] && echo ""
                 printfc "$NORD_SNOW_1" " >%s" "$repo"
                 while IFS= read -r line; do
                     [[ -z "$line" ]] && continue
                     local pkg=$(awk '{print $1}' <<< "$line")
                     local ver=$(awk '{$1=""; print $0}' <<< "$line" | xargs)
                     printfc "$NORD_YELLOW" " %-35s %s" "$pkg" "$ver"
+                    ((count++))
                 done <<< "${repo_updates[$repo]}"
             done
         fi
         if [[ -n "$aur_updates" ]]; then
             any=true
             printfc "$NORD_SNOW_1" " >AUR"
-            echo "$aur_updates" | while read -r line; do
+            while read -r line; do
+                [[ -z "$line" ]] && continue
                 local pkg=$(awk '{print $1}' <<< "$line")
                 local ver=$(awk '{$1=""; print $0}' <<< "$line" | xargs)
                 printfc "$NORD_YELLOW" " %-35s %s" "$pkg" "$ver"
-            done
+                ((count++))
+            done <<< "$aur_updates"
         fi
     fi
 
-    [[ "$any" == false ]] && { printfc "$NORD_BLUE" "\n>Packages"; printfc "$NORD_GREEN" "Up to date"; }
+    if [[ "$any" == true ]]; then
+        printfc "$NORD_YELLOW" "\n %d update(s) available" "$count"
+    else
+        printfc "$NORD_BLUE" "\n>Packages"
+        printfc "$NORD_GREEN" "Up to date"
+    fi
 
     local bf_temp bf_new
     bf_temp=$(mktemp)
