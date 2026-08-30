@@ -80,7 +80,11 @@ wpm_add() {
     printfc "$NORD_BLUE" "\n>Installing: %s" "$NAME"
 
     mkdir -p "$CONF_DIR"
-    cp "$CONFIG_PATH" "$CONF_DEST"
+    if ! cp "$CONFIG_PATH" "$CONF_DEST"; then
+        printfc "$NORD_RED" "Failed to copy config"
+        rm -f "$CONF_DEST"
+        return 1
+    fi
     chmod 600 "$CONF_DEST"
     printfc "$NORD_GREEN" "Config copied"
 
@@ -91,7 +95,7 @@ wpm_add() {
     fi
     printfc "$NORD_GREEN" "Bound to port %s" "$PORT"
 
-    cat <<UNIT > /etc/systemd/system/${SERVICE_NAME}.service
+    if ! cat <<UNIT > /etc/systemd/system/${SERVICE_NAME}.service
 [Unit]
 Description=wpm tunnel ($NAME)
 After=network.target
@@ -105,6 +109,10 @@ RestartSec=5
 [Install]
 WantedBy=multi-user.target
 UNIT
+    then
+        printfc "$NORD_RED" "Failed to write unit file"
+        return 1
+    fi
 
     if systemctl daemon-reload; then
         printfc "$NORD_GREEN" "Reloaded daemon"
@@ -204,12 +212,19 @@ wpm_rm() {
 
         if [[ -f "$CONF_FILE" ]]; then
             local backup_file="$BACKUP_ROOT/${NAME%-wpm}.conf"
-            cp "$CONF_FILE" "$backup_file"
-            printfc "$NORD_GREEN" "Backup: %s" "$backup_file"
+            if cp "$CONF_FILE" "$backup_file"; then
+                printfc "$NORD_GREEN" "Backup: %s" "$backup_file"
+            else
+                printfc "$NORD_RED" "Failed to back up %s — skipping removal" "$NAME"
+                continue
+            fi
         fi
 
-        systemctl stop "$NAME"
-        systemctl disable "$NAME"
+        if ! systemctl stop "$NAME"; then
+            printfc "$NORD_RED" "Failed to stop %s — skipping removal" "$NAME"
+            continue
+        fi
+        systemctl disable "$NAME" &>/dev/null
         rm -f "$service" "$CONF_FILE"
         systemctl daemon-reload
         printfc "$NORD_GREEN" "Removed %s" "$NAME"

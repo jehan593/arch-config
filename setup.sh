@@ -50,9 +50,11 @@ printfc "$GREEN" "Sudo authenticated."
 
 printfc "$BLUE" "\n>Environment Variable\n"
 
-echo "export ARCH_CONFIG_PATH=\"$DOTDIR\"" | sudo tee /etc/profile.d/arch-config.sh > /dev/null
-sudo chmod 644 /etc/profile.d/arch-config.sh
-printfc "$GREEN" "ARCH_CONFIG_PATH set to %s" "$DOTDIR"
+if echo "export ARCH_CONFIG_PATH=\"$DOTDIR\"" | sudo tee /etc/profile.d/arch-config.sh > /dev/null && sudo chmod 644 /etc/profile.d/arch-config.sh; then
+    printfc "$GREEN" "ARCH_CONFIG_PATH set to %s" "$DOTDIR"
+else
+    printfc "$RED" "Failed to write /etc/profile.d/arch-config.sh"
+fi
 
 # ==============================================================================
 # 2. USER CONFIG DIRECTORY
@@ -127,7 +129,11 @@ if ! command -v yay &>/dev/null; then
     git clone https://aur.archlinux.org/yay.git /tmp/yay-install
     (cd /tmp/yay-install && makepkg -si --noconfirm)
     rm -rf /tmp/yay-install
-    printfc "$GREEN" "yay installed."
+    if command -v yay &>/dev/null; then
+        printfc "$GREEN" "yay installed."
+    else
+        printfc "$RED" "yay installation failed."
+    fi
 else
     printfc "$GREEN" "yay already installed."
 fi
@@ -144,9 +150,11 @@ if ! grep -q "\[chaotic-aur\]" /etc/pacman.conf; then
     sudo pacman-key --lsign-key 3056513887B78AEB
     sudo pacman -U --noconfirm 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst'
     sudo pacman -U --noconfirm 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'
-    echo -e "\n[chaotic-aur]\nInclude = /etc/pacman.d/chaotic-mirrorlist" | sudo tee -a /etc/pacman.conf > /dev/null
-    sudo pacman -Sy
-    printfc "$GREEN" "Chaotic-AUR added."
+    if echo -e "\n[chaotic-aur]\nInclude = /etc/pacman.d/chaotic-mirrorlist" | sudo tee -a /etc/pacman.conf > /dev/null && sudo pacman -Sy; then
+        printfc "$GREEN" "Chaotic-AUR added."
+    else
+        printfc "$RED" "Failed to configure Chaotic-AUR."
+    fi
 else
     printfc "$GREEN" "Chaotic-AUR already configured."
 fi
@@ -282,7 +290,7 @@ if git clone https://github.com/Adapta-Projects/Papirus-Nord "$PAPIRUS_NORD_DIR"
         else
             sudo /usr/bin/papirus-folders -C frostblue4 --theme Papirus-Dark \
                 && printfc "$GREEN" "Frost Blue 4 folder color applied." \
-                || printfc "$RED" "papirus-folders not found after install."
+                || printfc "$RED" "Failed to apply folder color via sudo."
         fi
     else
         printfc "$RED" "install script not found in Papirus-Nord repo."

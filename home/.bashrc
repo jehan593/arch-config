@@ -228,27 +228,21 @@ _build_betterfox_userjs() {
     fi
 }
 
-_show_git_update_status() {
-    local repo_path="$1" label="$2" hint="$3" behind
+_git_behind_status() {
+    local repo_path="$1" label="$2" behind
     if [[ ! -d "$repo_path/.git" ]]; then
-        printfc "$NORD_YELLOW" "%s not found" "$label"
+        printf '%s|missing\n' "$label"
         return 0
     fi
     if ! git -C "$repo_path" fetch --quiet &>/dev/null; then
-        printfc "$NORD_RED" "%s fetch failed" "$label"
+        printf '%s|fetchfail\n' "$label"
         return 0
     fi
     if ! behind=$(git -C "$repo_path" rev-list --count 'HEAD..@{u}' 2>/dev/null); then
-        printfc "$NORD_YELLOW" "%s has no upstream branch" "$label"
+        printf '%s|noupstream\n' "$label"
         return 0
     fi
-    if (( behind > 0 )); then
-        local msg="$label $behind commit(s) behind"
-        [[ -n "$hint" ]] && msg="$msg, run '$hint'"
-        printfc "$NORD_YELLOW" "%s" "$msg"
-    else
-        printfc "$NORD_GREEN" "%s up to date" "$label"
-    fi
+    printf '%s|%s\n' "$label" "$behind"
 }
 
 cup() {
@@ -259,6 +253,8 @@ cup() {
     fi
     local any=false count=0 repo pkg line
     local entry repo_url repo_dest repo_path repo_name
+    local sl s_label s_val s_total=0 s_err_total=0
+    local -a st_behind=() st_err=()
     local all_updates=$(checkupdates 2>/dev/null)
     local aur_updates=$(yay -Qua 2>/dev/null)
 
@@ -297,7 +293,7 @@ cup() {
         fi
         if [[ -n "$aur_updates" ]]; then
             any=true
-            printfc "$NORD_SNOW_1" " >AUR"
+            printfc "$NORD_SNOW_1" "\n >AUR"
             while read -r line; do
                 [[ -z "$line" ]] && continue
                 local pkg=$(awk '{print $1}' <<< "$line")
@@ -309,7 +305,7 @@ cup() {
     fi
 
     if [[ "$any" == true ]]; then
-        printfc "$NORD_YELLOW" "\n %d update(s) available" "$count"
+        printfc "$NORD_YELLOW" "\n%d update(s) available" "$count"
     else
         printfc "$NORD_BLUE" "\n>Packages"
         printfc "$NORD_GREEN" "Up to date"
@@ -336,11 +332,56 @@ cup() {
         repo_path="${repo_dest/#\~/$HOME}"
         repo_name="${repo_url##*/}"
         repo_name="${repo_name%.git}"
-        _show_git_update_status "$repo_path/$repo_name" "$repo_name" "uprep"
+        sl=$(_git_behind_status "$repo_path/$repo_name" "$repo_name")
+        IFS='|' read -r s_label s_val <<< "$sl"
+        if [[ "$s_val" =~ ^[0-9]+$ ]]; then
+            if (( s_val > 0 )); then
+                st_behind+=("$s_label|$s_val")
+                ((s_total += s_val))
+            fi
+        else
+            st_err+=("$s_label|$s_val")
+            ((s_err_total++))
+        fi
     done
 
+    if (( ${#st_behind[@]} > 0 )); then
+        local sb bv bsl
+        for sl in "${st_behind[@]}"; do
+            IFS='|' read -r sb bv <<< "$sl"
+            printfc "$NORD_YELLOW" "%s %d commit(s) behind, run 'uprep'" "$sb" "$bv"
+        done
+        printfc "$NORD_YELLOW" "%d update(s) available" "$s_total"
+    elif (( s_err_total > 0 )); then
+        local se ev esl
+        for sl in "${st_err[@]}"; do
+            IFS='|' read -r se ev <<< "$sl"
+            case "$ev" in
+                missing)     printfc "$NORD_YELLOW" "%s not found" "$se" ;;
+                noupstream)  printfc "$NORD_YELLOW" "%s has no upstream branch" "$se" ;;
+                fetchfail)   printfc "$NORD_RED" "%s fetch failed" "$se" ;;
+            esac
+        done
+    else
+        printfc "$NORD_GREEN" "Up to date"
+    fi
+
     printfc "$NORD_BLUE" "\n>Arch Config"
-    _show_git_update_status "$ARCH_CONFIG_PATH" "arch-config" "upc"
+    sl=$(_git_behind_status "$ARCH_CONFIG_PATH" "arch-config")
+    IFS='|' read -r s_label s_val <<< "$sl"
+    if [[ "$s_val" =~ ^[0-9]+$ ]]; then
+        if (( s_val > 0 )); then
+            printfc "$NORD_YELLOW" "%s %d commit(s) behind, run 'upc'" "$s_label" "$s_val"
+        else
+            printfc "$NORD_GREEN" "Up to date"
+        fi
+    else
+        case "$s_val" in
+            missing)     printfc "$NORD_YELLOW" "%s not found" "$s_label" ;;
+            noupstream)  printfc "$NORD_YELLOW" "%s has no upstream branch" "$s_label" ;;
+            fetchfail)   printfc "$NORD_RED" "%s fetch failed" "$s_label" ;;
+        esac
+    fi
 }
 
 _record_history() {
@@ -480,7 +521,9 @@ upc() {
 
 uprep() {
     printfc "$NORD_BLUE" "\n>Repo Sync"
-    local found=false
+    local found=false updated=0
+    local entry repo_url repo_dest repo_path repo_name
+    local sl s_label s_val
     for entry in "${CLONE_REPOS[@]}"; do
         IFS='|' read -r repo_url repo_dest <<< "$entry"
         local repo_path="${repo_dest/#\~/$HOME}"
@@ -490,15 +533,27 @@ uprep() {
 
         if [[ -d "$repo_path/.git" ]]; then
             found=true
+            sl=$(_git_behind_status "$repo_path" "$repo_name")
+            IFS='|' read -r s_label s_val <<< "$sl"
+            if [[ "$s_val" =~ ^[0-9]+$ ]] && (( s_val == 0 )); then
+                continue
+            fi
             printfc "$NORD_YELLOW" "Pulling %s..." "$repo_name"
             if git -C "$repo_path" pull --rebase --autostash; then
                 printfc "$NORD_GREEN" "Updated %s" "$repo_name"
+                ((updated++))
             else
                 printfc "$NORD_RED" "Failed to update %s." "$repo_name"
             fi
         fi
     done
-    [[ "$found" = false ]] && printfc "$NORD_YELLOW" "No cloned repos found — run setup.sh to clone them."
+    if [[ "$found" == false ]]; then
+        printfc "$NORD_YELLOW" "No cloned repos found — run setup.sh to clone them."
+    elif (( updated == 0 )); then
+        printfc "$NORD_GREEN" "All repos up to date"
+    else
+        printfc "$NORD_YELLOW" "%d repo(s) updated" "$updated"
+    fi
 }
 
 upall() {
