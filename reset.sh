@@ -161,13 +161,12 @@ WGM_BACKUP="$BACKUP_ROOT"
 active=$(_get_active_tunnel)
 
 if [[ -n "$active" ]]; then
-    sudo systemctl disable --now "wg-quick@$active"
-    if [ $? -eq 0 ]; then
+    if sudo systemctl disable --now "wg-quick@$active"; then
         printfc "$GREEN" "Stopped tunnel: %s" "$active"
+        sudo rm -f "$WG_DIR/$active.conf"
     else
         printfc "$RED" "Failed to stop tunnel: %s" "$active"
     fi
-    sudo rm -f "$WG_DIR/$active.conf"
 else
     printfc "$YELLOW" "No active tunnel found, skipping."
 fi
@@ -179,15 +178,23 @@ if sudo test -d "$CONFIGS_DIR"; then
     if [[ ${#confs[@]} -gt 0 ]]; then
         sudo mkdir -p "$WGM_BACKUP"
         for conf in "${confs[@]}"; do
-            sudo cp "$conf" "$WGM_BACKUP/"
-            printfc "$GREEN" "Backed up: %s" "$(basename "$conf")"
+            if sudo cp "$conf" "$WGM_BACKUP/"; then
+                printfc "$GREEN" "Backed up: %s" "$(basename "$conf")"
+            else
+                printfc "$RED" "Failed to back up: %s" "$(basename "$conf")"
+            fi
         done
         sudo chown -R "$USER:$USER" "$WGM_BACKUP"
         printfc "$GREEN" "User configs backed up to %s" "$WGM_BACKUP"
     fi
 fi
 
-sudo test -d "$WGM_ROOT" && sudo rm -rf "$WGM_ROOT" && printfc "$GREEN" "Removed ~/.config/arch-config-files/wgm"
+if sudo test -d "$WGM_ROOT"; then
+    sudo rm -rf "$WGM_ROOT"
+    printfc "$GREEN" "Removed %s" "${WGM_ROOT/#$HOME/\~}"
+else
+    printfc "$YELLOW" "WGM config dir not found, skipping."
+fi
 
 # ==============================================================================
 # 9. REMOVE wpm TUNNELS
@@ -211,18 +218,25 @@ if [[ ${#services[@]} -gt 0 ]]; then
             CONFS=$(sudo find "$CONF_DIR" -maxdepth 1 -name "*.conf" 2>/dev/null)
             if [[ -n "$CONFS" ]]; then
                 mkdir -p "$BACKUP_DIR"
-                sudo cp "$CONF_DIR"/*.conf "$BACKUP_DIR/"
-                sudo chmod 644 "$BACKUP_DIR/"*.conf
-                sudo chown "$USER:$USER" "$BACKUP_DIR/"*.conf
-                printfc "$GREEN" "Configs backed up to %s" "$BACKUP_DIR"
+                if sudo cp "$CONF_DIR"/*.conf "$BACKUP_DIR/"; then
+                    sudo chmod 644 "$BACKUP_DIR/"*.conf
+                    sudo chown "$USER:$USER" "$BACKUP_DIR/"*.conf
+                    printfc "$GREEN" "Configs backed up to %s" "$BACKUP_DIR"
+                else
+                    printfc "$RED" "Failed to back up wpm configs."
+                fi
             fi
         fi
         for service in "${services[@]}"; do
             NAME=$(basename "$service" .service)
-            sudo systemctl stop "$NAME"
-            sudo systemctl disable "$NAME"
+            if sudo systemctl stop "$NAME"; then
+                printfc "$GREEN" "Removed tunnel: %s" "$NAME"
+            else
+                printfc "$RED" "Failed to stop %s, skipping removal." "$NAME"
+                continue
+            fi
+            sudo systemctl disable "$NAME" &>/dev/null
             sudo rm -f "$service"
-            printfc "$GREEN" "Removed tunnel: %s" "$NAME"
         done
         sudo rm -rf "$CONF_DIR"
         sudo systemctl daemon-reload

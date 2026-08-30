@@ -136,7 +136,10 @@ wgm_on() {
     printfc "$NORD_BLUE" "\n>Connecting to %s" "$name"
 
     mkdir -p "$WG_DIR"
-    cp "$path" "$WG_DIR/$name.conf"
+    if ! cp "$path" "$WG_DIR/$name.conf"; then
+        printfc "$NORD_RED" "Failed to copy config"
+        return 1
+    fi
     chmod 600 "$WG_DIR/$name.conf"
 
     if systemctl enable --now "wg-quick@$name"; then
@@ -190,7 +193,11 @@ wgm_add() {
         return 1
     fi
     printfc "$NORD_BLUE" "\n>Adding Profile"
-    cp "$src" "$dest"
+    if ! cp "$src" "$dest"; then
+        printfc "$NORD_RED" "Failed to copy profile"
+        rm -f "$dest"
+        return 1
+    fi
     chmod 600 "$dest"
     sed -i '/^DNS/d' "$dest"
     printfc "$NORD_GREEN" "Profile added"
@@ -230,7 +237,10 @@ wgm_rm() {
     mkdir -p "$BACKUP_ROOT"
     chown -R "$REAL_USER:$REAL_USER" "$BACKUP_ROOT"
     local backup_file="$BACKUP_ROOT/${selected}.conf"
-    cp "$target" "$backup_file"
+    if ! cp "$target" "$backup_file"; then
+        printfc "$NORD_RED" "Failed to back up %s — aborting removal" "$selected"
+        return 1
+    fi
 
     printfc "$NORD_BLUE" "\n>Removing Profile"
     rm -f "$target"
