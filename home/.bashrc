@@ -228,6 +228,16 @@ _build_betterfox_userjs() {
     fi
 }
 
+_betterfox_profile_dirs() {
+    find "$HOME/.config/mozilla/firefox" -maxdepth 2 -mindepth 2 -name "times.json" 2>/dev/null -printf '%h\n'
+}
+
+_betterfox_profile_current() {
+    local expected="$1" profile_dir="$2"
+    [[ -f "$profile_dir/user.js" ]] || return 1
+    [[ "$(sha256sum "$profile_dir/user.js" | awk '{print $1}')" == "$expected" ]]
+}
+
 _git_behind_status() {
     local repo_path="$1" label="$2" behind
     if [[ ! -d "$repo_path/.git" ]]; then
@@ -311,15 +321,26 @@ cup() {
         printfc "$NORD_GREEN" "Up to date"
     fi
 
-    local bf_temp bf_new
+    local bf_temp bf_new bf_dir bf_p bf_global_new=false bf_behind=()
     bf_temp=$(mktemp)
     printfc "$NORD_BLUE" "\n>Betterfox"
     if _build_betterfox_userjs "$bf_temp"; then
         bf_new=$(sha256sum "$bf_temp" | awk '{print $1}')
-        if [[ -f "$BETTERFOX_HASH_FILE" ]] && [[ "$(cat "$BETTERFOX_HASH_FILE")" == "$bf_new" ]]; then
+        if [[ ! -f "$BETTERFOX_HASH_FILE" ]] || [[ "$(cat "$BETTERFOX_HASH_FILE")" != "$bf_new" ]]; then
+            bf_global_new=true
+        fi
+        while IFS= read -r bf_dir; do
+            _betterfox_profile_current "$bf_new" "$bf_dir" || bf_behind+=("$(basename "$bf_dir")")
+        done < <(_betterfox_profile_dirs)
+        if [[ "${#bf_behind[@]}" -eq 0 ]]; then
             printfc "$NORD_GREEN" "Up to date"
-        else
+        elif [[ "$bf_global_new" == true ]]; then
             printfc "$NORD_YELLOW" "Update available, run 'upf'"
+        else
+            printfc "$NORD_YELLOW" "New or outdated profile(s), run 'upf'"
+            for bf_p in "${bf_behind[@]}"; do
+                printfc "$NORD_YELLOW" " %s" "$bf_p"
+            done
         fi
     else
         printfc "$NORD_RED" "Check failed: could not download Betterfox"
@@ -467,8 +488,7 @@ uinst() {
 }
 
 upf() {
-    local FF_DIR="$HOME/.config/mozilla/firefox"
-    local temp_file new_hash times_file profile_path found=false
+    local temp_file new_hash profile_dir updated=0 current=0 failed=0
 
     printfc "$NORD_BLUE" "\n>Firefox Config"
 
@@ -480,29 +500,38 @@ upf() {
     fi
 
     new_hash=$(sha256sum "$temp_file" | awk '{print $1}')
-    if [[ -f "$BETTERFOX_HASH_FILE" ]] && [[ "$(cat "$BETTERFOX_HASH_FILE")" == "$new_hash" ]]; then
-        rm -f "$temp_file"
-        printfc "$NORD_GREEN" "Betterfox already up to date"
-        return 0
-    fi
 
-    while IFS= read -r times_file; do
-        profile_path=$(dirname "$times_file")
-        if cp "$temp_file" "$profile_path/user.js"; then
-            printfc "$NORD_GREEN" "Updated profile: %s" "$(basename "$profile_path")"
-            found=true
-        else
-            printfc "$NORD_RED" "Failed profile: %s" "$(basename "$profile_path")"
+    while IFS= read -r profile_dir; do
+        if _betterfox_profile_current "$new_hash" "$profile_dir"; then
+            ((current++))
+            continue
         fi
-    done < <(find "$FF_DIR" -maxdepth 2 -mindepth 2 -name "times.json")
+        if cp "$temp_file" "$profile_dir/user.js"; then
+            printfc "$NORD_GREEN" "Updated profile: %s" "$(basename "$profile_dir")"
+            ((updated++))
+        else
+            printfc "$NORD_RED" "Failed profile: %s" "$(basename "$profile_dir")"
+            ((failed++))
+        fi
+    done < <(_betterfox_profile_dirs)
 
     rm -f "$temp_file"
 
-    if [[ "$found" == true ]]; then
+    local total=$((updated + current + failed))
+    if [[ "$total" -eq 0 ]]; then
+        printfc "$NORD_RED" "No Firefox profiles found"
+        return 1
+    fi
+
+    if [[ "$current" -gt 0 ]]; then
+        printfc "$NORD_GREEN" "%d profile(s) already up to date" "$current"
+    fi
+    if [[ "$updated" -gt 0 ]]; then
         mkdir -p "$(dirname "$BETTERFOX_HASH_FILE")"
         printf '%s' "$new_hash" > "$BETTERFOX_HASH_FILE"
-    else
-        printfc "$NORD_RED" "No Firefox profiles found"
+    fi
+    if [[ "$updated" -eq 0 && "$failed" -gt 0 ]]; then
+        printfc "$NORD_RED" "Failed to update profile(s)"
         return 1
     fi
 }
