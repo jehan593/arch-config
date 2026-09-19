@@ -12,4 +12,3 @@ export NORD_POLAR_4=$'\e[38;2;76;86;106m'
 # Additional accents needed beyond the base palette above.
 export NORD_CYAN_L=$'\e[38;2;136;192;208m'
 export NORD_ORANGE=$'\e[38;2;208;135;112m'
-export NORD_DIM=$'\e[38;5;240m'

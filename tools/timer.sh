@@ -200,10 +200,10 @@ _draw_static() {
     printf '\e[2J'
 
     local label_line="Timer: $label"
-    _write_centered "$w" $(( start_row - 2 )) "$label_line" "${NORD_DIM}"
+    _write_centered "$w" $(( start_row - 2 )) "$label_line" "${NORD_POLAR_4}"
 
     local hint="Space/P: Pause · Ctrl+C: Cancel"
-    _write_centered "$w" "$hint_row" "$hint" "${NORD_DIM}"
+    _write_centered "$w" "$hint_row" "$hint" "${NORD_POLAR_4}"
 }
 
 _draw_dynamic() {
@@ -251,12 +251,12 @@ _draw_dynamic() {
     else
         pct_str="${pct}%"
     fi
-    _write_centered "$w" "$pct_row" "$pct_str" "${NORD_DIM}"
+    _write_centered "$w" "$pct_row" "$pct_str" "${NORD_POLAR_4}"
 }
 
 if [[ -z "$1" ]]; then
     printfc "$NORD_BLUE" "\n>Usage: timer <duration>"
-    printfc "$NORD_DIM" "Examples: 30s, 5m, 1h, 1h30m"
+    printfc "$NORD_POLAR_4" "Examples: 30s, 5m, 1h, 1h30m"
     exit 1
 fi
 
@@ -384,7 +384,7 @@ _write_at "$done_pad" $(( mid - 1 )) "${NORD_GREEN}${done_msg}${RST}"
 
 sub_str=$(_format_duration "$total_secs")
 sub_pad=$(( (w - ${#sub_str}) / 2 ))
-_write_at "$sub_pad" $(( mid + 1 )) "${NORD_DIM}${sub_str}${RST}"
+_write_at "$sub_pad" $(( mid + 1 )) "${NORD_POLAR_4}${sub_str}${RST}"
 
 _beep() {
     if command -v paplay &>/dev/null; then
