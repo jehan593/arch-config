@@ -14,9 +14,9 @@ $nodejs\
 $rust\
 $golang\
 $php\
-[](fg:#2e3440 bg:#434c5e)\
+[](fg:#2e3440 bg:#242933)\
 $time\
-[ ](fg:#434c5e)\
+[ ](fg:#242933)\
 \n$character"""
 
 [directory]
@@ -63,8 +63,8 @@ format = '[[ $symbol ($version) ](fg:#88c0d0 bg:#2e3440)]($style)'
 [time]
 disabled = false
 time_format = "%R"
-style = "bg:#434c5e"
-format = '[[  $time ](fg:#81a1c1 bg:#434c5e)]($style)'
+style = "bg:#242933"
+format = '[[  $time ](fg:#81a1c1 bg:#242933)]($style)'
 
 [character]
 success_symbol = "[➜](bold #88c0d0)"
