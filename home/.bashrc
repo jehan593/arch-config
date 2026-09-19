@@ -103,13 +103,14 @@ rr() {
 }
 alias conf='[[ -x $(command -v zeditor) ]] && (printfc "$NORD_YELLOW" "Opening configs..." && zeditor "$ARCH_CONFIG_PATH/") || printfc "$NORD_RED" "Zed not found"'
 
-# System Functions (Icons explicitly kept here)
+# System Functions
 sys() {
     local total_pkgs=$(pacman -Qq | wc -l)
     local ker=$(uname -r | cut -d '-' -f1)
     local mem=$(free -h | awk '/^Mem:/ {print $3 " / " $2}')
     local uptime=$(uptime -p | sed 's/up //')
     local age=$(aage)
+    [[ "$age" -eq 1 ]] && age="$age day" || age="$age days"
 
     local f="  %s  %-12s %s"
     echo ""
@@ -117,7 +118,7 @@ sys() {
     printfc "$NORD_SNOW_1" "$f" "󰟾" "Kernel"   "$ker"
     printfc "$NORD_SNOW_1" "$f" "󰏖" "Packages" "$total_pkgs"
     printfc "$NORD_SNOW_1" "$f" "󰍛" "Memory"   "$mem"
-    printfc "$NORD_SNOW_1" "$f" "󰃭" "OS Age"   "$age days"
+    printfc "$NORD_SNOW_1" "$f" "󰃭" "OS Age"   "$age"
 
     if [[ -f "$IDEAPAD_CONSERVATION" ]]; then
         local status
@@ -135,16 +136,16 @@ if [[ -f "$IDEAPAD_CONSERVATION" ]]; then
         case "$action" in
             on)
                 if echo 1 | sudo tee "$IDEAPAD_CONSERVATION" > /dev/null; then
-                    printfc "$NORD_GREEN" "Conservation mode enabled (80%% limit)"
+                    printfc "$NORD_GREEN" "Conservation mode on (80%% limit)"
                 else
-                    printfc "$NORD_RED" "Failed to enable conservation mode"
+                    printfc "$NORD_RED" "Failed to turn on conservation mode"
                 fi
                 ;;
             off)
                 if echo 0 | sudo tee "$IDEAPAD_CONSERVATION" > /dev/null; then
-                    printfc "$NORD_GREEN" "Full charge enabled"
+                    printfc "$NORD_GREEN" "Conservation mode off"
                 else
-                    printfc "$NORD_RED" "Failed to enable full charge"
+                    printfc "$NORD_RED" "Failed to turn off conservation mode"
                 fi
                 ;;
             *)
@@ -541,7 +542,7 @@ upc() {
     if git -C "$ARCH_CONFIG_PATH" pull --rebase --autostash; then
         printfc "$NORD_GREEN" "Config synced"
         echo ""
-        printfc "$NORD_YELLOW" "run 'reload' to apply changes"
+        printfc "$NORD_YELLOW" "Run 'reload' to apply changes"
     else
         printfc "$NORD_RED" "Sync failed"
         return 1

@@ -11,4 +11,6 @@ CLONE_REPOS=(
     "https://github.com/jehan593/notesnook-clipper|~/browser-extensions"
     "https://github.com/jehan593/chrome-newtab-dashboard|~/browser-extensions"
     "https://github.com/jehan593/webtime-tracker|~/browser-extensions"
+    "https://github.com/jehan593/refocus|~/browser-extensions"
+    "https://github.com/jehan593/link-cleaner|~/browser-extensions"
 )

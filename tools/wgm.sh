@@ -44,7 +44,7 @@ _pick_config() {
     local list
     list=$(_get_all_configs)
     if [[ -z "$list" ]]; then
-        printfc "$NORD_RED" "No profiles found"
+        printfc "$NORD_YELLOW" "No profiles found"
         return 1
     fi
 
@@ -154,7 +154,7 @@ wgm_off() {
     active=$(_get_active_tunnel)
 
     if [[ -z "$active" ]]; then
-        printfc "$NORD_RED" "No active connection"
+        printfc "$NORD_YELLOW" "No active connection"
         return
     fi
 
@@ -216,7 +216,7 @@ wgm_rm() {
     local confs=("$CONFIGS_DIR"/*.conf)
     shopt -u nullglob
     if [[ ${#confs[@]} -eq 0 ]]; then
-        printfc "$NORD_RED" "No profiles to remove"
+        printfc "$NORD_YELLOW" "No profiles to remove"
         return
     fi
 

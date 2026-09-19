@@ -28,7 +28,7 @@ printfc "$CYAN" "└────────────────────
 printfc "$YELLOW" "This will UNDO everything setup.sh configured."
 printfc -n "$YELLOW" "Are you sure you want to reset? [y/N]: "
 read -r confirm
-[[ "$confirm" =~ ^[Yy]$ ]] || { echo -e "\nAborted.\n"; exit 0; }
+[[ "$confirm" =~ ^[Yy]$ ]] || { printfc "$YELLOW" "\nAborted."; exit 0; }
 
 sudo -v || { printfc "$RED" "Sudo authentication failed."; exit 1; }
 printfc "$GREEN" "Sudo authenticated."
@@ -326,5 +326,5 @@ done
 # DONE
 # ==============================================================================
 
-printfc "$GREEN" "Reset complete! Open a new terminal session."
+printfc "$GREEN" "Reset complete. Open a new terminal session."
 printfc "$YELLOW" "Your dotfiles repository remains intact."

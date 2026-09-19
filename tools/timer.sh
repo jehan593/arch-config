@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Timer
+# Fullscreen countdown timer
 
 source "$ARCH_CONFIG_PATH/helpers/colors-nord.sh"
 source "$ARCH_CONFIG_PATH/helpers/printer.sh"
