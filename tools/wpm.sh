@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# WireGuard Manager (wpm)
+# WireProxy Tunnel Manager (wpm)
 
 source "$ARCH_CONFIG_PATH/helpers/colors-nord.sh"
 source "$ARCH_CONFIG_PATH/helpers/printer.sh"
@@ -140,7 +140,7 @@ wpm_ls() {
     printfc "$NORD_BLUE" "\n>wpm Tunnels"
 
     if [[ ${#services[@]} -eq 0 ]]; then
-        printfc "$NORD_RED" "No tunnels found"
+        printfc "$NORD_YELLOW" "No tunnels found"
         return
     fi
 
@@ -163,7 +163,7 @@ _wpm_pick_tunnels() {
     local services=(/etc/systemd/system/*-wpm.service)
 
     if [[ ${#services[@]} -eq 0 ]]; then
-        printfc "$NORD_RED" "No tunnels found"
+        printfc "$NORD_YELLOW" "No tunnels found"
         return 1
     fi
 
@@ -192,7 +192,7 @@ _wpm_pick_tunnels() {
 }
 
 wpm_rm() {
-    printfc "$NORD_BLUE" "\n>Uninstall Tunnel"
+    printfc "$NORD_BLUE" "\n>Uninstalling Tunnels"
     _wpm_pick_tunnels "Uninstall" || { return; }
     local to_remove=("${WPM_PICKED[@]}") service
 

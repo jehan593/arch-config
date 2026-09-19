@@ -47,10 +47,10 @@ vim.opt.expandtab      = true
 vim.opt.clipboard      = "unnamedplus"
 vim.opt.termguicolors  = true
 vim.opt.wrap           = false
-vim.opt.ignorecase = true   -- case-insensitive search
-vim.opt.smartcase  = true   -- ...unless you type uppercase
-vim.opt.hlsearch   = true   -- highlight all matches
-vim.opt.incsearch  = true   -- show matches as you type
+vim.opt.ignorecase = true
+vim.opt.smartcase  = true
+vim.opt.hlsearch   = true
+vim.opt.incsearch  = true
 
 -- 5. Keymaps
 vim.keymap.set("i", "jk", "<Esc>")

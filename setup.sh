@@ -317,5 +317,5 @@ done
 # DONE
 # ==============================================================================
 
-printfc "$GREEN" "Setup complete! Restart your shell."
-printfc "$YELLOW" "Run: source ~/.bashrc"
+printfc "$GREEN" "Setup complete."
+printfc "$YELLOW" "Restart your shell: source ~/.bashrc"

@@ -9,6 +9,8 @@ package manager and AUR access). Some steps (`gsettings` schemas, the theme
 package list) are Cinnamon-specific — skip or adapt those sections if you're
 on a different desktop.
 
+> **FYI:** This project is fully vibe coded 
+
 ## Quick start
 
 ```bash
@@ -38,7 +40,8 @@ bash ~/arch-config/reset.sh
 8. Enables `Color`/`ILoveCandy` in `pacman.conf`.
 9. Clones every repo in `helpers/repo-list.sh` into `$HOME` (currently the
    [wallpapers repo](https://github.com/jehan593/my-wallpapers) →
-   `~/Pictures/config-wallpapers`).
+   `~/Pictures/my-wallpapers`, plus several browser-extension repos →
+   `~/browser-extensions`).
 10. Installs the Nord GTK/icon/cursor theme and applies it via `gsettings`.
 
 `reset.sh` reverses each of these in turn (with confirmation prompts before
@@ -74,21 +77,22 @@ missing.
 |---|---|
 | `sys` | Uptime, kernel, package count, memory, OS age, battery |
 | `cup` | Check for updates: pacman/AUR packages, Betterfox, cloned repos, this config |
-| `upp [-all]` | Upgrade packages (fzf-select a repo, or `-all` for everything) |
+| `upp` | Upgrade all packages (system + AUR) |
 | `upc` | Pull the latest arch-config from git |
 | `upf` | Refresh Firefox prefs from Betterfox + local overrides (skips if unchanged) |
 | `uprep` | Pull updates for all cloned repos (stashes local changes) |
-| `upall` | Runs `upp -all`, `upf`, `uprep`, `upc` together |
+| `upall` | Runs `upp`, `upf`, `uprep`, `upc` together |
+| `up-mirrors` | Refresh pacman mirrors with reflector |
 | `inst` / `inst -refresh` | fzf package installer (Pacman + AUR) |
 | `uinst` | fzf package remover, flags explicitly-installed packages |
-| `cleanup` | Clears pacman/AUR caches, trash, and stale history files |
+| `cleanup` | Clears pacman/AUR caches, trash, and stale temp files |
 | `cons-mode {on,off}` | Toggle ThinkPad/IdeaPad battery conservation mode |
-| `sys-res {on,off}` | Toggle a blank `systemd-resolved.conf` (back up/restore) |
 | `trash <path>...` | Freedesktop-Trash-compatible delete |
 | `ff [dir]` | fzf file finder, copies the picked path to the clipboard |
 | `sz [path]` | Disk usage of a file/directory |
 | `open [path]` | Wraps `xdg-open` |
 | `conf` | Opens the repo in Zed, if installed |
+| `rr` | Re-runs the last history command as sudo |
 | `\C-h` | Deduplicated fzf history search bound to Ctrl+H |
 
 ## Configuration included
