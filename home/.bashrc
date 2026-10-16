@@ -257,10 +257,11 @@ _git_behind_status() {
 }
 
 cup() {
+    local sync_ok=true
     if ! sudo pacman -Sy --noconfirm &>/dev/null; then
         printfc "$NORD_RED" "Failed to sync package database"
         echo ""
-        return 1
+        sync_ok=false
     fi
     local any=false count=0 repo pkg line
     local entry repo_url repo_dest repo_path repo_name
@@ -269,7 +270,7 @@ cup() {
     local all_updates=$(checkupdates 2>/dev/null)
     local aur_updates=$(yay -Qua 2>/dev/null)
 
-    if [[ -n "$all_updates" ]] || [[ -n "$aur_updates" ]]; then
+    if [[ "$sync_ok" == true && ( -n "$all_updates" || -n "$aur_updates" ) ]]; then
         printfc "$NORD_BLUE" "\n>Packages"
         if [[ -n "$all_updates" ]]; then
             local pkgs=($(echo "$all_updates" | awk '{print $1}'))
@@ -317,7 +318,7 @@ cup() {
 
     if [[ "$any" == true ]]; then
         printfc "$NORD_YELLOW" "\n%d update(s) available" "$count"
-    else
+    elif [[ "$sync_ok" == true ]]; then
         printfc "$NORD_BLUE" "\n>Packages"
         printfc "$NORD_GREEN" "Up to date"
     fi
@@ -608,10 +609,12 @@ upp() {
 
 up-mirrors() {
     printfc "$NORD_BLUE" "\n>Mirror Update"
-    if sudo reflector --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist && sudo pacman -Syyu; then
+    if sudo reflector --latest 20 --protocol https --sort rate --save /etc/pacman.d/mirrorlist; then
         printfc "$NORD_GREEN" "Mirrors updated"
+        sudo pacman -Syyu || printfc "$NORD_RED" "Failed to sync or upgrade packages"
     else
         printfc "$NORD_RED" "Failed to update mirrors"
+        return 1
     fi
 }
 
