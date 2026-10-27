@@ -122,7 +122,7 @@ sys() {
 
     if [[ -f "$IDEAPAD_CONSERVATION" ]]; then
         local status
-        [[ $(< "$IDEAPAD_CONSERVATION") -eq 1 ]] && status="Conservation Mode (80%)" || status="Full Charge (100%)"
+        [[ $(< "$IDEAPAD_CONSERVATION") -eq 1 ]] && status="80% (Conservation Mode)" || status="100% (Full Charge)"
         printfc "$NORD_SNOW_1" "$f" "󱊟" "Battery" "$status"
     fi
     printfc "$NORD_SNOW_1" "$f" "󰒍" "Shell" "Bash ${BASH_VERSION%%(*}"
