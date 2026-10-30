@@ -8,6 +8,7 @@ DEPENDENCIES=(
     "mpv" "xclip" "neovim"
     "reflector" "pacman-contrib" "git" "qview"
     "tldr" "topgrade" "ripgrep"
+    "perl-image-exiftool"
 )
 
 THEME_PACKAGES=(
