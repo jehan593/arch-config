@@ -672,6 +672,30 @@ trash() {
     done
 }
 
+cleanimg() {
+    if [[ $# -eq 0 ]]; then
+        printfc "$NORD_YELLOW" "Usage: cleanimg <image>..."
+        return 1
+    fi
+    if ! command -v exiftool &>/dev/null; then
+        printfc "$NORD_RED" "exiftool not found"
+        return 1
+    fi
+
+    local img
+    for img in "$@"; do
+        if [[ ! -f "$img" ]]; then
+            printfc "$NORD_RED" "Not found: %s" "$img"
+            continue
+        fi
+        if exiftool -q -all= -overwrite_original -- "$img"; then
+            printfc "$NORD_GREEN" "Cleaned metadata: %s" "$img"
+        else
+            printfc "$NORD_RED" "Failed to clean: %s" "$img"
+        fi
+    done
+}
+
 ff() {
     local search_path="${1:-/}"
     if [[ ! -d "$search_path" ]]; then
