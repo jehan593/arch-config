@@ -100,7 +100,7 @@ missing.
 - **Shell**: `.bashrc`, Starship prompt (`starship.toml`), Nord truecolor
   palette
 - **Editor**: Neovim (`init.lua`)
-- **Media**: mpv (`mpv.conf`, `input.conf`)
+- **Media**: mpv (`mpv.conf`, `input.conf`, `scripts/hold-space-2x.lua`)
 - **Maintenance**: Topgrade (`topgrade.toml`)
 - **Browser policy**: Brave, Firefox (telemetry/tracking disabled, uBlock
   Origin pinned), VS Code — installed system-wide via `etc/`
