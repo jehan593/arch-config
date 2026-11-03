@@ -102,7 +102,7 @@ missing.
 - **Editor**: Neovim (`init.lua`)
 - **Media**: mpv (`mpv.conf`, `input.conf`, `scripts/hold-space-2x.lua`)
 - **Maintenance**: Topgrade (`topgrade.toml`)
-- **Browser policy**: Brave, Firefox (telemetry/tracking disabled, uBlock
-  Origin pinned), VS Code — installed system-wide via `etc/`
+- **Browser policy**: Brave, Chrome, Firefox (telemetry/tracking disabled,
+  uBlock Origin pinned), VS Code — installed system-wide via `etc/`
 - **Firefox prefs**: [Betterfox](https://github.com/yokoffing/Betterfox)
   baseline, pruned/extended by `data/firefox/` and applied by `upf`
