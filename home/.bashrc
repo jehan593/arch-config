@@ -603,7 +603,6 @@ upall() {
 upp() {
     _print_pkg_updates
     echo ""
-    printfc "$NORD_BLUE" ">Upgrading Packages: All repos"
     if sudo pacman -Syu --noconfirm; then
         echo ""
         printfc "$NORD_BLUE" ">Upgrading Packages: AUR"
