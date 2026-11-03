@@ -256,6 +256,59 @@ _git_behind_status() {
     printf '%s|%s\n' "$label" "$behind"
 }
 
+_print_pkg_updates() {
+    local repo pkg line count=0
+    local all_updates=$(checkupdates 2>/dev/null)
+    local aur_updates=$(yay -Qua 2>/dev/null)
+    PKG_UPDATE_COUNT=0
+
+    if [[ -z "$all_updates" && -z "$aur_updates" ]]; then
+        return 0
+    fi
+    printfc "$NORD_BLUE" "\n>Packages"
+    if [[ -n "$all_updates" ]]; then
+        local pkgs=($(echo "$all_updates" | awk '{print $1}'))
+        declare -A pkg_repo
+        while read -r repo pkg; do
+            pkg_repo["$pkg"]="$repo"
+        done < <(pacman -Sp --print-format '%r %n' "${pkgs[@]}" 2>/dev/null)
+
+        declare -A repo_updates
+        while IFS= read -r line; do
+            pkg=$(echo "$line" | awk '{print $1}')
+            repo="${pkg_repo[$pkg]}"
+            [[ -z "$repo" ]] && continue
+            repo_updates["$repo"]+="$line"$'\n'
+        done <<< "$all_updates"
+
+        local sorted_repos=($(echo "${!repo_updates[@]}" | tr ' ' '\n' | sort))
+        local ri
+        for ri in "${!sorted_repos[@]}"; do
+            repo="${sorted_repos[$ri]}"
+            [[ "$ri" -gt 0 ]] && echo ""
+            printfc "$NORD_SNOW_1" " >%s" "$repo"
+            while IFS= read -r line; do
+                [[ -z "$line" ]] && continue
+                local pkg=$(awk '{print $1}' <<< "$line")
+                local ver=$(awk '{$1=""; print $0}' <<< "$line" | xargs)
+                printfc "$NORD_YELLOW" " %s [%s]" "$pkg" "$ver"
+                ((count++))
+            done <<< "${repo_updates[$repo]}"
+        done
+    fi
+    if [[ -n "$aur_updates" ]]; then
+        printfc "$NORD_SNOW_1" "\n >AUR"
+        while read -r line; do
+            [[ -z "$line" ]] && continue
+            local pkg=$(awk '{print $1}' <<< "$line")
+            local ver=$(awk '{$1=""; print $0}' <<< "$line" | xargs)
+            printfc "$NORD_YELLOW" " %s [%s]" "$pkg" "$ver"
+            ((count++))
+        done <<< "$aur_updates"
+    fi
+    PKG_UPDATE_COUNT="$count"
+}
+
 cup() {
     local sync_ok=true
     if ! sudo pacman -Sy --noconfirm &>/dev/null; then
@@ -263,60 +316,16 @@ cup() {
         echo ""
         sync_ok=false
     fi
-    local any=false count=0 repo pkg line
-    local entry repo_url repo_dest repo_path repo_name
+    local count=0 entry repo_url repo_dest repo_path repo_name
     local sl s_label s_val s_total=0 s_err_total=0
     local -a st_behind=() st_err=()
-    local all_updates=$(checkupdates 2>/dev/null)
-    local aur_updates=$(yay -Qua 2>/dev/null)
 
-    if [[ "$sync_ok" == true && ( -n "$all_updates" || -n "$aur_updates" ) ]]; then
-        printfc "$NORD_BLUE" "\n>Packages"
-        if [[ -n "$all_updates" ]]; then
-            local pkgs=($(echo "$all_updates" | awk '{print $1}'))
-            declare -A pkg_repo
-            while read -r repo pkg; do
-                pkg_repo["$pkg"]="$repo"
-            done < <(pacman -Sp --print-format '%r %n' "${pkgs[@]}" 2>/dev/null)
-
-            declare -A repo_updates
-            while IFS= read -r line; do
-                pkg=$(echo "$line" | awk '{print $1}')
-                repo="${pkg_repo[$pkg]}"
-                [[ -z "$repo" ]] && continue
-                repo_updates["$repo"]+="$line"$'\n'
-            done <<< "$all_updates"
-
-            local sorted_repos=($(echo "${!repo_updates[@]}" | tr ' ' '\n' | sort))
-            local ri
-            for ri in "${!sorted_repos[@]}"; do
-                repo="${sorted_repos[$ri]}"
-                any=true
-                [[ "$ri" -gt 0 ]] && echo ""
-                printfc "$NORD_SNOW_1" " >%s" "$repo"
-                while IFS= read -r line; do
-                    [[ -z "$line" ]] && continue
-                    local pkg=$(awk '{print $1}' <<< "$line")
-                    local ver=$(awk '{$1=""; print $0}' <<< "$line" | xargs)
-                    printfc "$NORD_YELLOW" " %-35s %s" "$pkg" "$ver"
-                    ((count++))
-                done <<< "${repo_updates[$repo]}"
-            done
-        fi
-        if [[ -n "$aur_updates" ]]; then
-            any=true
-            printfc "$NORD_SNOW_1" "\n >AUR"
-            while read -r line; do
-                [[ -z "$line" ]] && continue
-                local pkg=$(awk '{print $1}' <<< "$line")
-                local ver=$(awk '{$1=""; print $0}' <<< "$line" | xargs)
-                printfc "$NORD_YELLOW" " %-35s %s" "$pkg" "$ver"
-                ((count++))
-            done <<< "$aur_updates"
-        fi
+    if [[ "$sync_ok" == true ]]; then
+        _print_pkg_updates
+        count="$PKG_UPDATE_COUNT"
     fi
 
-    if [[ "$any" == true ]]; then
+    if [[ "$count" -gt 0 ]]; then
         printfc "$NORD_YELLOW" "\n%d update(s) available" "$count"
     elif [[ "$sync_ok" == true ]]; then
         printfc "$NORD_BLUE" "\n>Packages"
@@ -592,6 +601,7 @@ upall() {
 }
 
 upp() {
+    _print_pkg_updates
     echo ""
     printfc "$NORD_BLUE" ">Upgrading Packages: All repos"
     if sudo pacman -Syu --noconfirm; then
