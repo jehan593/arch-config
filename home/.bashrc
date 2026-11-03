@@ -291,7 +291,7 @@ _print_pkg_updates() {
                 [[ -z "$line" ]] && continue
                 local pkg=$(awk '{print $1}' <<< "$line")
                 local ver=$(awk '{$1=""; print $0}' <<< "$line" | xargs)
-                printfc "$NORD_YELLOW" " %s [%s]" "$pkg" "$ver"
+                printfc "$NORD_YELLOW" " %s $NORD_SNOW_1[%s]" "$pkg" "$ver"
                 ((count++))
             done <<< "${repo_updates[$repo]}"
         done
@@ -302,7 +302,7 @@ _print_pkg_updates() {
             [[ -z "$line" ]] && continue
             local pkg=$(awk '{print $1}' <<< "$line")
             local ver=$(awk '{$1=""; print $0}' <<< "$line" | xargs)
-            printfc "$NORD_YELLOW" " %s [%s]" "$pkg" "$ver"
+            printfc "$NORD_YELLOW" " %s $NORD_SNOW_1[%s]" "$pkg" "$ver"
             ((count++))
         done <<< "$aur_updates"
     fi
