@@ -724,4 +724,22 @@ ff() {
     printfc "$NORD_GREEN" "Copied: %s" "$selection"
 }
 
+bpm() {
+    if ! command -v curl &>/dev/null; then
+        printfc "$NORD_RED" "curl not found"
+        return 1
+    fi
+
+    (
+        local tmp
+        tmp=$(mktemp) || exit 1
+        trap 'rm -f "$tmp"' EXIT
+        if ! curl -fsSL -o "$tmp" https://raw.githubusercontent.com/jehan593/brave-profile-manager/main/brave-profile-manager.sh; then
+            printfc "$NORD_RED" "Failed to download brave-profile-manager"
+            exit 1
+        fi
+        bash "$tmp" "$@"
+    )
+}
+
 sys

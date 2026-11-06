@@ -89,6 +89,7 @@ missing.
 | `cons-mode {on,off}` | Toggle ThinkPad/IdeaPad battery conservation mode |
 | `trash <path>...` | Freedesktop-Trash-compatible delete |
 | `ff [dir]` | fzf file finder, copies the picked path to the clipboard |
+| `bpm [args]` | Downloads [brave-profile-manager](https://github.com/jehan593/brave-profile-manager) to a temp file, runs it, then deletes the file on exit |
 | `sz [path]` | Disk usage of a file/directory |
 | `open [path]` | Wraps `xdg-open` |
 | `conf` | Opens the repo in Zed, if installed |
