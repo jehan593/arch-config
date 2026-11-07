@@ -691,16 +691,31 @@ cleanimg() {
         return 1
     fi
 
-    local img
+    local img dir ext rand new
     for img in "$@"; do
         if [[ ! -f "$img" ]]; then
             printfc "$NORD_RED" "Not found: %s" "$img"
             continue
         fi
-        if exiftool -q -all= -overwrite_original -- "$img"; then
-            printfc "$NORD_GREEN" "Cleaned metadata: %s" "$img"
-        else
+        if ! exiftool -q -all= -overwrite_original -- "$img"; then
             printfc "$NORD_RED" "Failed to clean: %s" "$img"
+            continue
+        fi
+
+        dir=$(dirname -- "$img")
+        ext="${img##*.}"
+        [[ "$ext" == "$img" ]] && ext="" || ext=".$ext"
+        rand=$(tr -dc 'a-zA-Z0-9' </dev/urandom | head -c 12)
+        new="$dir/$rand$ext"
+        while [[ -e "$new" ]]; do
+            rand=$(tr -dc 'a-zA-Z0-9' </dev/urandom | head -c 12)
+            new="$dir/$rand$ext"
+        done
+
+        if mv -- "$img" "$new"; then
+            printfc "$NORD_GREEN" "Cleaned and renamed: %s -> %s" "$img" "$new"
+        else
+            printfc "$NORD_RED" "Cleaned but failed to rename: %s" "$img"
         fi
     done
 }
