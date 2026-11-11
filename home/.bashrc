@@ -214,9 +214,18 @@ cleanup() {
 
 _build_betterfox_userjs() {
     local out="$1" key
-    if ! curl -fsSL "https://raw.githubusercontent.com/yokoffing/Betterfox/main/user.js" -o "$out" &>/dev/null; then
+    local url="https://raw.githubusercontent.com/yokoffing/Betterfox/main/user.js"
+    local cache="$HOME/.cache/arch-config/betterfox-user.js"
+    local part="$cache.part"
+    mkdir -p "$(dirname "$cache")"
+    if ! curl -fsSL -z "$cache" "$url" -o "$part" &>/dev/null; then
+        rm -f "$part"
         return 1
     fi
+    [[ -s "$part" ]] && mv -f "$part" "$cache"
+    rm -f "$part"
+    [[ -f "$cache" ]] || return 1
+    cp "$cache" "$out" || return 1
     if [[ -f "$ARCH_CONFIG_PATH/data/firefox/user-removals.txt" ]]; then
         while IFS= read -r key; do
             [[ -z "$key" ]] && continue
@@ -257,9 +266,16 @@ _git_behind_status() {
 }
 
 _print_pkg_updates() {
-    local repo pkg line count=0
-    local all_updates=$(checkupdates 2>/dev/null)
-    local aur_updates=$(yay -Qua 2>/dev/null)
+    local repo pkg line count=0 aur_pid jc=0 tmpd
+    tmpd=$(mktemp -d) || return 1
+    [[ $- == *m* ]] && { jc=1; set +m; }
+    ( yay -Qua 2>/dev/null > "$tmpd/aur" ) </dev/null &
+    aur_pid=$!
+    local all_updates=$(pacman -Qu 2>/dev/null | grep -v '\[.*\]')
+    wait "$aur_pid"
+    (( jc )) && set -m
+    local aur_updates=$(< "$tmpd/aur")
+    rm -rf "$tmpd"
     PKG_UPDATE_COUNT=0
 
     if [[ -z "$all_updates" && -z "$aur_updates" ]]; then
@@ -275,22 +291,21 @@ _print_pkg_updates() {
 
         declare -A repo_updates
         while IFS= read -r line; do
-            pkg=$(echo "$line" | awk '{print $1}')
+            read -r pkg _ <<< "$line"
             repo="${pkg_repo[$pkg]}"
             [[ -z "$repo" ]] && continue
             repo_updates["$repo"]+="$line"$'\n'
         done <<< "$all_updates"
 
         local sorted_repos=($(echo "${!repo_updates[@]}" | tr ' ' '\n' | sort))
-        local ri
+        local ri ver
         for ri in "${!sorted_repos[@]}"; do
             repo="${sorted_repos[$ri]}"
             [[ "$ri" -gt 0 ]] && echo ""
             printfc "$NORD_SNOW_1" " >%s" "$repo"
             while IFS= read -r line; do
                 [[ -z "$line" ]] && continue
-                local pkg=$(awk '{print $1}' <<< "$line")
-                local ver=$(awk '{$1=""; print $0}' <<< "$line" | xargs)
+                read -r pkg ver <<< "$line"
                 printfc "$NORD_YELLOW" " %s $NORD_SNOW_1[%s]" "$pkg" "$ver"
                 ((count++))
             done <<< "${repo_updates[$repo]}"
@@ -300,8 +315,7 @@ _print_pkg_updates() {
         printfc "$NORD_SNOW_1" "\n >AUR"
         while read -r line; do
             [[ -z "$line" ]] && continue
-            local pkg=$(awk '{print $1}' <<< "$line")
-            local ver=$(awk '{$1=""; print $0}' <<< "$line" | xargs)
+            read -r pkg ver <<< "$line"
             printfc "$NORD_YELLOW" " %s $NORD_SNOW_1[%s]" "$pkg" "$ver"
             ((count++))
         done <<< "$aur_updates"
@@ -316,9 +330,27 @@ cup() {
         echo ""
         sync_ok=false
     fi
-    local count=0 entry repo_url repo_dest repo_path repo_name
+    local count=0 entry repo_url repo_dest repo_path repo_name i=0
     local sl s_label s_val s_total=0 s_err_total=0
-    local -a st_behind=() st_err=()
+    local -a st_behind=() st_err=() bg_pids=()
+    local bf_new bf_dir bf_p bf_global_new=false bf_behind=()
+    local tmpd jc=0
+    tmpd=$(mktemp -d) || return 1
+    [[ $- == *m* ]] && { jc=1; set +m; }
+
+    ( _build_betterfox_userjs "$tmpd/betterfox.js" && touch "$tmpd/betterfox.ok" ) &
+    bg_pids+=($!)
+    for entry in "${CLONE_REPOS[@]}"; do
+        IFS='|' read -r repo_url repo_dest <<< "$entry"
+        repo_path="${repo_dest/#\~/$HOME}"
+        repo_name="${repo_url##*/}"
+        repo_name="${repo_name%.git}"
+        ( _git_behind_status "$repo_path/$repo_name" "$repo_name" > "$tmpd/repo.$i" ) </dev/null &
+        bg_pids+=($!)
+        ((i++))
+    done
+    ( _git_behind_status "$ARCH_CONFIG_PATH" "arch-config" > "$tmpd/arch" ) </dev/null &
+    bg_pids+=($!)
 
     if [[ "$sync_ok" == true ]]; then
         _print_pkg_updates
@@ -332,11 +364,12 @@ cup() {
         printfc "$NORD_GREEN" "Up to date"
     fi
 
-    local bf_temp bf_new bf_dir bf_p bf_global_new=false bf_behind=()
-    bf_temp=$(mktemp)
+    wait "${bg_pids[@]}"
+    (( jc )) && set -m
+
     printfc "$NORD_BLUE" "\n>Betterfox"
-    if _build_betterfox_userjs "$bf_temp"; then
-        bf_new=$(sha256sum "$bf_temp" | awk '{print $1}')
+    if [[ -f "$tmpd/betterfox.ok" ]]; then
+        bf_new=$(sha256sum "$tmpd/betterfox.js" | awk '{print $1}')
         if [[ ! -f "$BETTERFOX_HASH_FILE" ]] || [[ "$(cat "$BETTERFOX_HASH_FILE")" != "$bf_new" ]]; then
             bf_global_new=true
         fi
@@ -356,15 +389,10 @@ cup() {
     else
         printfc "$NORD_RED" "Check failed: could not download Betterfox"
     fi
-    rm -f "$bf_temp"
 
     printfc "$NORD_BLUE" "\n>Cloned Repos"
-    for entry in "${CLONE_REPOS[@]}"; do
-        IFS='|' read -r repo_url repo_dest <<< "$entry"
-        repo_path="${repo_dest/#\~/$HOME}"
-        repo_name="${repo_url##*/}"
-        repo_name="${repo_name%.git}"
-        sl=$(_git_behind_status "$repo_path/$repo_name" "$repo_name")
+    for (( i = 0; i < ${#CLONE_REPOS[@]}; i++ )); do
+        sl=$(< "$tmpd/repo.$i")
         IFS='|' read -r s_label s_val <<< "$sl"
         if [[ "$s_val" =~ ^[0-9]+$ ]]; then
             if (( s_val > 0 )); then
@@ -399,7 +427,7 @@ cup() {
     fi
 
     printfc "$NORD_BLUE" "\n>Arch Config"
-    sl=$(_git_behind_status "$ARCH_CONFIG_PATH" "arch-config")
+    sl=$(< "$tmpd/arch")
     IFS='|' read -r s_label s_val <<< "$sl"
     if [[ "$s_val" =~ ^[0-9]+$ ]]; then
         if (( s_val > 0 )); then
@@ -414,6 +442,7 @@ cup() {
             fetchfail)   printfc "$NORD_RED" "%s fetch failed" "$s_label" ;;
         esac
     fi
+    rm -rf "$tmpd"
 }
 
 _record_history() {
@@ -449,8 +478,14 @@ inst() {
             --header "CTRL-P: Preview | CTRL-A: toggle all" \
             --preview '
                 item={}; repo=${item%%/*}; pkg=${item#*/}
-                if [ "$repo" = "aur" ]; then yay -Siai "$pkg" 2>/dev/null; else yay -Sii "$pkg"; fi | \
-                awk "/^(Votes|Popularity)/ { stats = stats \"$NORD_YELLOW\" \$0 \"$RST\n\" } !/^(Votes|Popularity)/ { body = body \$0 \"\n\" } END { printf \"%s%s\", stats, body }"
+                cache="$HOME/.cache/arch-config/inst-preview/$repo-$pkg"
+                if [ ! -s "$cache" ] || [ -n "$(find "$cache" -mmin +1440 2>/dev/null)" ]; then
+                    mkdir -p "$(dirname "$cache")"
+                    if [ "$repo" = "aur" ]; then yay -Siai "$pkg" 2>/dev/null; else yay -Sii "$pkg"; fi > "$cache.tmp"
+                    [ -s "$cache.tmp" ] && mv -f "$cache.tmp" "$cache"
+                    rm -f "$cache.tmp"
+                fi
+                awk "/^(Votes|Popularity)/ { stats = stats \"$NORD_YELLOW\" \$0 \"$RST\n\" } !/^(Votes|Popularity)/ { body = body \$0 \"\n\" } END { printf \"%s%s\", stats, body }" "$cache" 2>/dev/null
             ')
         [[ -z "$selected" ]] && return 0
         local pkgs
@@ -461,21 +496,14 @@ inst() {
 }
 
 _pkg_list() {
-    local explicit=$(pacman -Qeq)
-    {
-        local repos=$(pacman -Sl 2>/dev/null | awk '{print $1}' | sort -u)
-        while read -r repo; do
-            pacman -Sl "$repo" 2>/dev/null | grep '\[installed\]' | awk -v r="$repo" '{print r"/"$2}'
-        done <<< "$repos"
+    local listing
+    listing=$({
+        pacman -Sl 2>/dev/null | awk '/\[installed\]/ { print $1 "/" $2 }' | sort -s -t/ -k1,1
         pacman -Qm | awk '{print "aur/"$1}'
-    } | while read -r line; do
-        local pkg="${line#*/}"
-        if echo "$explicit" | grep -qx "$pkg"; then
-            echo "  $line"
-        else
-            echo "* $line"
-        fi
-    done
+    })
+    awk 'NR == FNR { explicit[$0] = 1; next }
+        { pkg = $0; sub(/^[^\/]*\//, "", pkg); print (pkg in explicit ? "  " : "* ") $0 }' \
+        <(pacman -Qeq) - <<< "$listing"
 }
 
 uinst() {
@@ -561,19 +589,38 @@ upc() {
 
 uprep() {
     printfc "$NORD_BLUE" "\n>Repo Sync"
-    local found=false updated=0
+    local found=false updated=0 i=0
     local entry repo_url repo_dest repo_path repo_name
     local sl s_label s_val
+    local tmpd jc=0
+    local -a bg_pids=()
+    tmpd=$(mktemp -d) || return 1
+    [[ $- == *m* ]] && { jc=1; set +m; }
     for entry in "${CLONE_REPOS[@]}"; do
         IFS='|' read -r repo_url repo_dest <<< "$entry"
-        local repo_path="${repo_dest/#\~/$HOME}"
-        local repo_name="${repo_url##*/}"
+        repo_path="${repo_dest/#\~/$HOME}"
+        repo_name="${repo_url##*/}"
+        repo_name="${repo_name%.git}"
+        repo_path="$repo_path/$repo_name"
+        if [[ -d "$repo_path/.git" ]]; then
+            ( _git_behind_status "$repo_path" "$repo_name" > "$tmpd/repo.$i" ) </dev/null &
+            bg_pids+=($!)
+        fi
+        ((i++))
+    done
+    (( ${#bg_pids[@]} > 0 )) && wait "${bg_pids[@]}"
+    (( jc )) && set -m
+
+    for (( i = 0; i < ${#CLONE_REPOS[@]}; i++ )); do
+        IFS='|' read -r repo_url repo_dest <<< "${CLONE_REPOS[$i]}"
+        repo_path="${repo_dest/#\~/$HOME}"
+        repo_name="${repo_url##*/}"
         repo_name="${repo_name%.git}"
         repo_path="$repo_path/$repo_name"
 
         if [[ -d "$repo_path/.git" ]]; then
             found=true
-            sl=$(_git_behind_status "$repo_path" "$repo_name")
+            sl=$(< "$tmpd/repo.$i")
             IFS='|' read -r s_label s_val <<< "$sl"
             if [[ "$s_val" =~ ^[0-9]+$ ]] && (( s_val == 0 )); then
                 continue
@@ -587,6 +634,7 @@ uprep() {
             fi
         fi
     done
+    rm -rf "$tmpd"
     if [[ "$found" == false ]]; then
         printfc "$NORD_YELLOW" "No cloned repos found — run setup.sh to clone them."
     elif (( updated == 0 )); then
@@ -601,6 +649,7 @@ upall() {
 }
 
 upp() {
+    sudo pacman -Sy --noconfirm &>/dev/null
     _print_pkg_updates
     echo ""
     if sudo pacman -Syu --noconfirm; then

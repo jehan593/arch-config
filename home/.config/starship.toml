@@ -71,8 +71,8 @@ success_symbol = "[➜](bold #88c0d0)"
 error_symbol = "[➜](bold #bf616a)"
 
 [custom.vpn]
-command = 'wg show interfaces 2>/dev/null | head -n1'
-when = 'wg show interfaces 2>/dev/null | grep -q .'
+command = 'ip -br link show type wireguard 2>/dev/null | head -n1 | cut -d" " -f1'
+when = 'ip -br link show type wireguard 2>/dev/null | grep -q .'
 shell = "bash"
 style = "bg:#3b4252"
 format = '[[ 󰌆 $output ](fg:#d08770 bg:#3b4252)]($style)'
