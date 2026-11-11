@@ -266,16 +266,11 @@ _git_behind_status() {
 }
 
 _print_pkg_updates() {
-    local repo pkg line count=0 aur_pid jc=0 tmpd
-    tmpd=$(mktemp -d) || return 1
-    [[ $- == *m* ]] && { jc=1; set +m; }
-    ( yay -Qua 2>/dev/null > "$tmpd/aur" ) </dev/null &
-    aur_pid=$!
+    local repo pkg line count=0 afd
+    exec {afd}< <(yay -Qua 2>/dev/null </dev/null)
     local all_updates=$(pacman -Qu 2>/dev/null | grep -v '\[.*\]')
-    wait "$aur_pid"
-    (( jc )) && set -m
-    local aur_updates=$(< "$tmpd/aur")
-    rm -rf "$tmpd"
+    local aur_updates=$(cat <&"$afd")
+    exec {afd}<&-
     PKG_UPDATE_COUNT=0
 
     if [[ -z "$all_updates" && -z "$aur_updates" ]]; then
@@ -332,25 +327,23 @@ cup() {
     fi
     local count=0 entry repo_url repo_dest repo_path repo_name i=0
     local sl s_label s_val s_total=0 s_err_total=0
-    local -a st_behind=() st_err=() bg_pids=()
+    local -a st_behind=() st_err=()
     local bf_new bf_dir bf_p bf_global_new=false bf_behind=()
-    local tmpd jc=0
+    local tmpd bgfd
     tmpd=$(mktemp -d) || return 1
-    [[ $- == *m* ]] && { jc=1; set +m; }
-
-    ( _build_betterfox_userjs "$tmpd/betterfox.js" && touch "$tmpd/betterfox.ok" ) &
-    bg_pids+=($!)
-    for entry in "${CLONE_REPOS[@]}"; do
-        IFS='|' read -r repo_url repo_dest <<< "$entry"
-        repo_path="${repo_dest/#\~/$HOME}"
-        repo_name="${repo_url##*/}"
-        repo_name="${repo_name%.git}"
-        ( _git_behind_status "$repo_path/$repo_name" "$repo_name" > "$tmpd/repo.$i" ) </dev/null &
-        bg_pids+=($!)
-        ((i++))
-    done
-    ( _git_behind_status "$ARCH_CONFIG_PATH" "arch-config" > "$tmpd/arch" ) </dev/null &
-    bg_pids+=($!)
+    exec {bgfd}< <(
+        set +m
+        ( _build_betterfox_userjs "$tmpd/betterfox.js" && touch "$tmpd/betterfox.ok" ) </dev/null &
+        for (( i = 0; i < ${#CLONE_REPOS[@]}; i++ )); do
+            IFS='|' read -r repo_url repo_dest <<< "${CLONE_REPOS[$i]}"
+            repo_path="${repo_dest/#\~/$HOME}"
+            repo_name="${repo_url##*/}"
+            repo_name="${repo_name%.git}"
+            ( _git_behind_status "$repo_path/$repo_name" "$repo_name" > "$tmpd/repo.$i" ) </dev/null &
+        done
+        ( _git_behind_status "$ARCH_CONFIG_PATH" "arch-config" > "$tmpd/arch" ) </dev/null &
+        wait
+    )
 
     if [[ "$sync_ok" == true ]]; then
         _print_pkg_updates
@@ -364,8 +357,8 @@ cup() {
         printfc "$NORD_GREEN" "Up to date"
     fi
 
-    wait "${bg_pids[@]}"
-    (( jc )) && set -m
+    cat <&"$bgfd" >/dev/null
+    exec {bgfd}<&-
 
     printfc "$NORD_BLUE" "\n>Betterfox"
     if [[ -f "$tmpd/betterfox.ok" ]]; then
@@ -592,24 +585,24 @@ uprep() {
     local found=false updated=0 i=0
     local entry repo_url repo_dest repo_path repo_name
     local sl s_label s_val
-    local tmpd jc=0
-    local -a bg_pids=()
+    local tmpd bgfd
     tmpd=$(mktemp -d) || return 1
-    [[ $- == *m* ]] && { jc=1; set +m; }
-    for entry in "${CLONE_REPOS[@]}"; do
-        IFS='|' read -r repo_url repo_dest <<< "$entry"
-        repo_path="${repo_dest/#\~/$HOME}"
-        repo_name="${repo_url##*/}"
-        repo_name="${repo_name%.git}"
-        repo_path="$repo_path/$repo_name"
-        if [[ -d "$repo_path/.git" ]]; then
-            ( _git_behind_status "$repo_path" "$repo_name" > "$tmpd/repo.$i" ) </dev/null &
-            bg_pids+=($!)
-        fi
-        ((i++))
-    done
-    (( ${#bg_pids[@]} > 0 )) && wait "${bg_pids[@]}"
-    (( jc )) && set -m
+    exec {bgfd}< <(
+        set +m
+        for (( i = 0; i < ${#CLONE_REPOS[@]}; i++ )); do
+            IFS='|' read -r repo_url repo_dest <<< "${CLONE_REPOS[$i]}"
+            repo_path="${repo_dest/#\~/$HOME}"
+            repo_name="${repo_url##*/}"
+            repo_name="${repo_name%.git}"
+            repo_path="$repo_path/$repo_name"
+            if [[ -d "$repo_path/.git" ]]; then
+                ( _git_behind_status "$repo_path" "$repo_name" > "$tmpd/repo.$i" ) </dev/null &
+            fi
+        done
+        wait
+    )
+    cat <&"$bgfd" >/dev/null
+    exec {bgfd}<&-
 
     for (( i = 0; i < ${#CLONE_REPOS[@]}; i++ )); do
         IFS='|' read -r repo_url repo_dest <<< "${CLONE_REPOS[$i]}"
