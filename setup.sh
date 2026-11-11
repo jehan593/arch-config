@@ -126,7 +126,7 @@ if ! command -v yay &>/dev/null; then
     printfc "$YELLOW" "Installing yay..."
     sudo pacman -S --needed --noconfirm base-devel git
     rm -rf /tmp/yay-install
-    git clone https://aur.archlinux.org/yay.git /tmp/yay-install
+    git clone --depth 1 https://aur.archlinux.org/yay.git /tmp/yay-install
     (cd /tmp/yay-install && makepkg -si --noconfirm)
     rm -rf /tmp/yay-install
     if command -v yay &>/dev/null; then
@@ -276,7 +276,7 @@ yay -S --noconfirm --needed "${THEME_PACKAGES[@]}" \
 printfc "$YELLOW" "Applying Papirus Nord folder colors (Frost Blue 4)..."
 PAPIRUS_NORD_DIR="/tmp/papirus-nord-install"
 rm -rf "$PAPIRUS_NORD_DIR"
-if git clone https://github.com/Adapta-Projects/Papirus-Nord "$PAPIRUS_NORD_DIR"; then
+if git clone --depth 1 https://github.com/Adapta-Projects/Papirus-Nord "$PAPIRUS_NORD_DIR"; then
     if [[ -f "$PAPIRUS_NORD_DIR/install" ]]; then
         cd "$PAPIRUS_NORD_DIR" || exit 1
         echo "N" | sudo bash install \

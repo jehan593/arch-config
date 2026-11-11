@@ -310,6 +310,7 @@ remaining=$total_secs
 paused=0
 last_w=0
 last_h=0
+last_size_check=-1
 start_row=0
 bar_row=0
 pct_row=0
@@ -326,7 +327,10 @@ trap _cleanup INT TERM EXIT HUP
 
 _check_resize() {
     local label="$1"
-    _term_size
+    if (( SECONDS != last_size_check )); then
+        last_size_check=$SECONDS
+        _term_size
+    fi
     w=$COLUMNS
     h=$LINES
 
