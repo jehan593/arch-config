@@ -130,6 +130,144 @@ sys() {
     echo ""
 }
 
+_syscheck_row() {
+    local level="$1" label="$2" value="$3" color icon
+    case "$level" in
+        ok)   color="$NORD_GREEN";  icon="✓" ;;
+        warn) color="$NORD_YELLOW"; icon="!"; warn=$((warn + 1)) ;;
+        bad)  color="$NORD_RED";    icon="✗"; bad=$((bad + 1)) ;;
+        *)    color="$NORD_SNOW_1"; icon="·" ;;
+    esac
+    printfc "$color" "  %s  %-14s %s" "$icon" "$label" "$value"
+}
+
+syscheck() {
+    local bad=0 warn=0 line pct mnt avail used d out errs count
+    local bat cap status full design health mt mu ma st su mpct t failed sudo_ok=true
+
+    sudo -v || sudo_ok=false
+
+    printfc "$NORD_BLUE" "\n>Services"
+    failed=$(systemctl --failed --no-legend --plain 2>/dev/null | awk '{print $1}' | paste -sd, - | sed 's/,/, /g')
+    if [[ -z "$failed" ]]; then
+        _syscheck_row ok "Failed units" "none"
+    else
+        _syscheck_row bad "Failed units" "$failed"
+    fi
+
+    printfc "$NORD_BLUE" "\n>Disk usage"
+    while read -r pct mnt avail; do
+        used=${pct%\%}
+        if (( used >= 95 )); then
+            _syscheck_row bad "$mnt" "$pct used · $avail free"
+        elif (( used >= 85 )); then
+            _syscheck_row warn "$mnt" "$pct used · $avail free"
+        else
+            _syscheck_row ok "$mnt" "$pct used · $avail free"
+        fi
+    done < <(df -hP -x tmpfs -x devtmpfs -x squashfs -x overlay -x efivarfs 2>/dev/null | awk 'NR>1 {print $5, $6, $4}')
+
+    printfc "$NORD_BLUE" "\n>Disk health"
+    if ! command -v smartctl &>/dev/null; then
+        _syscheck_row warn "smartctl" "not installed (pacman -S smartmontools)"
+    elif [[ "$sudo_ok" != true ]]; then
+        _syscheck_row warn "SMART" "skipped, sudo authentication failed"
+    else
+        while read -r d; do
+            out=$(sudo smartctl -H "/dev/$d" 2>&1)
+            if grep -qE 'PASSED|Health Status: OK' <<< "$out"; then
+                _syscheck_row ok "/dev/$d" "healthy"
+            elif grep -qE 'FAILED|Health Status: .*(CRITICAL|FAIL)' <<< "$out"; then
+                _syscheck_row bad "/dev/$d" "SMART check FAILED, back up your data"
+            else
+                _syscheck_row info "/dev/$d" "no SMART data"
+            fi
+        done < <(lsblk -dno NAME,TYPE 2>/dev/null | awk '$2=="disk" {print $1}')
+    fi
+
+    printfc "$NORD_BLUE" "\n>Memory"
+    read -r mt mu ma < <(free -m | awk '/^Mem:/ {print $2, $3, $7}')
+    read -r st su < <(free -m | awk '/^Swap:/ {print $2, $3}')
+    mpct=$(( mu * 100 / mt ))
+    if (( mpct >= 90 )); then
+        _syscheck_row warn "RAM" "$mpct% used · $ma MiB available"
+    else
+        _syscheck_row ok "RAM" "$mpct% used · $ma MiB available"
+    fi
+    _syscheck_row info "Swap" "$su / $st MiB used"
+
+    t=$(cat /sys/class/thermal/thermal_zone*/temp 2>/dev/null | sort -n | tail -1)
+    if [[ -n "$t" ]]; then
+        printfc "$NORD_BLUE" "\n>Temperature"
+        t=$(( t / 1000 ))
+        if (( t >= 90 )); then
+            _syscheck_row bad "Hottest" "$t°C"
+        elif (( t >= 80 )); then
+            _syscheck_row warn "Hottest" "$t°C"
+        else
+            _syscheck_row ok "Hottest" "$t°C"
+        fi
+    fi
+
+    for bat in /sys/class/power_supply/BAT*; do
+        [[ -e "$bat" ]] || continue
+        printfc "$NORD_BLUE" "\n>Battery"
+        cap=$(< "$bat/capacity")
+        status=$(< "$bat/status")
+        if [[ -r "$bat/energy_full" ]]; then
+            full=$(< "$bat/energy_full"); design=$(< "$bat/energy_full_design")
+        else
+            full=$(< "$bat/charge_full"); design=$(< "$bat/charge_full_design")
+        fi
+        health=$(( design > 0 ? full * 100 / design : 0 ))
+        _syscheck_row ok "Charge" "$cap% · $status"
+        if (( health < 80 )); then
+            _syscheck_row warn "Health" "$health% of design capacity"
+        else
+            _syscheck_row ok "Health" "$health% of design capacity"
+        fi
+    done
+
+    printfc "$NORD_BLUE" "\n>System"
+    if [[ ! -d "/usr/lib/modules/$(uname -r)" ]]; then
+        _syscheck_row warn "Kernel" "updated, reboot to load it"
+    else
+        _syscheck_row ok "Kernel" "running latest installed"
+    fi
+
+    if [[ "$(timedatectl show -p NTPSynchronized --value 2>/dev/null)" == yes ]]; then
+        _syscheck_row ok "Clock" "synced"
+    else
+        _syscheck_row warn "Clock" "not synced"
+    fi
+
+    count=$(find /etc -xdev -name '*.pacnew' 2>/dev/null | wc -l)
+    if (( count > 0 )); then
+        _syscheck_row warn "Pacnew" "$count file(s) in /etc, review with pacdiff"
+    else
+        _syscheck_row ok "Pacnew" "none in /etc"
+    fi
+
+    if ! errs=$(journalctl -b -p err -q --no-pager 2>/dev/null); then
+        _syscheck_row warn "Journal" "could not be read"
+    elif [[ -n "$errs" ]]; then
+        count=$(wc -l <<< "$errs")
+        _syscheck_row warn "Journal" "$count error(s) this boot (journalctl -b -p err)"
+    else
+        _syscheck_row ok "Journal" "no errors this boot"
+    fi
+
+    printfc "$NORD_POLAR_4" "\n──────────────────────────────────────────────"
+    if (( bad == 0 && warn == 0 )); then
+        printfc "$NORD_GREEN" "  ✓  All checks passed"
+    elif (( bad == 0 )); then
+        printfc "$NORD_YELLOW" "  !  %d warning(s)" "$warn"
+    else
+        printfc "$NORD_RED" "  ✗  %d problem(s), %d warning(s)" "$bad" "$warn"
+    fi
+    echo ""
+}
+
 if [[ -f "$IDEAPAD_CONSERVATION" ]]; then
     cons-mode() {
         local action="$1"
