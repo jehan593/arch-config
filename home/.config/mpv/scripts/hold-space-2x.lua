@@ -31,26 +31,73 @@ local engaged = false
 local timer = nil
 local was_paused = false -- video was paused when the hold started
 
+local osd_timer = nil
+local osd_clear = nil
+
+-- Nerd Font (Material Design) glyphs. Built from code points so the file
+-- stays plain ASCII and needs no utf8 library.
+local function glyph(cp)
+    return string.char(0xF0 + math.floor(cp / 0x40000), 0x80 + math.floor(cp / 0x1000) % 64,
+        0x80 + math.floor(cp / 64) % 64, 0x80 + cp % 64)
+end
+local ICON_PLAY  = glyph(0xF040A)
+local ICON_PAUSE = glyph(0xF03E4)
+local ICON_FF    = glyph(0xF0211)
+
+local function show_osd(content, secs)
+    mp.set_osd_ass(0, 0, "{\\an9\\fnMartianMono NF\\fs34}" .. content)
+    if osd_clear then osd_clear:kill() end
+    osd_clear = mp.add_timeout(secs, function()
+        mp.set_osd_ass(0, 0, "")
+        osd_clear = nil
+    end)
+end
+
 local function engage()
     engaged = true
     mp.set_property_number("speed", opts.speed)
     if was_paused then
         mp.set_property_bool("pause", false)
     end
-    mp.osd_message(">> " .. opts.speed .. "x")
+    show_osd(ICON_FF, 1)
+    osd_timer = mp.add_periodic_timer(0.5, function()
+        show_osd(ICON_FF, 1)
+    end)
 end
 
 local function restore_speed()
     engaged = false
+    if osd_timer then
+        osd_timer:kill()
+        osd_timer = nil
+    end
     local s = orig_speed or 1.0
     mp.set_property_number("speed", s)
     if was_paused then
         mp.set_property_bool("pause", true)
-        mp.osd_message("|| " .. string.format("%.2g", s) .. "x")
+        show_osd(ICON_PAUSE, 1)
     else
-        mp.osd_message("> " .. string.format("%.2g", s) .. "x")
+        show_osd(ICON_PLAY, 1)
     end
 end
+
+local pause_timer = nil
+
+mp.observe_property("pause", "bool", function(_, paused)
+    if pause_timer then
+        pause_timer:kill()
+        pause_timer = nil
+    end
+    if engaged then return end
+    if paused then
+        show_osd(ICON_PAUSE, 1)
+        pause_timer = mp.add_periodic_timer(0.5, function()
+            show_osd(ICON_PAUSE, 1)
+        end)
+    else
+        show_osd(ICON_PLAY, 1)
+    end
+end)
 
 local function on_up(canceled)
     if timer then
