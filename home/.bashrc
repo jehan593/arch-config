@@ -165,7 +165,7 @@ syscheck() {
         else
             _syscheck_row ok "$mnt" "$pct used · $avail free"
         fi
-    done < <(df -hP -x tmpfs -x devtmpfs -x squashfs -x overlay -x efivarfs 2>/dev/null | awk 'NR>1 {print $5, $6, $4}')
+    done < <(df -hPT -x tmpfs -x devtmpfs -x squashfs -x overlay -x efivarfs 2>/dev/null | awk 'NR>1 && $2 !~ /^fuse/ && $7 !~ /^\/tmp\// {print $6, $7, $5}')
 
     printfc "$NORD_BLUE" "\n>Disk health"
     if ! command -v smartctl &>/dev/null; then
@@ -174,6 +174,7 @@ syscheck() {
         _syscheck_row warn "SMART" "skipped, sudo authentication failed"
     else
         while read -r d; do
+            [[ -e "/sys/block/$d/device" ]] || continue
             out=$(sudo smartctl -H "/dev/$d" 2>&1)
             if grep -qE 'PASSED|Health Status: OK' <<< "$out"; then
                 _syscheck_row ok "/dev/$d" "healthy"
