@@ -144,19 +144,30 @@ fi
 
 printfc "$BLUE" "\n>Chaotic-AUR\n"
 
-if ! grep -q "\[chaotic-aur\]" /etc/pacman.conf; then
-    printfc "$YELLOW" "Adding Chaotic-AUR keyring and mirrorlist..."
+CHAOTIC_MIRRORLIST=/etc/pacman.d/chaotic-mirrorlist
+
+if grep -q "\[chaotic-aur\]" /etc/pacman.conf && [[ -f "$CHAOTIC_MIRRORLIST" ]]; then
+    printfc "$GREEN" "Chaotic-AUR already configured."
+else
+    printfc "$YELLOW" "Configuring Chaotic-AUR keyring and mirrorlist..."
+    if grep -q "\[chaotic-aur\]" /etc/pacman.conf; then
+        printfc "$YELLOW" "Removing stale [chaotic-aur] section (mirrorlist missing)..."
+        sudo sed -i '/\[chaotic-aur\]/,/Include.*chaotic-mirrorlist/d' /etc/pacman.conf
+    fi
     sudo pacman-key --recv-key 3056513887B78AEB --keyserver keyserver.ubuntu.com
     sudo pacman-key --lsign-key 3056513887B78AEB
-    sudo pacman -U --noconfirm 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst'
-    sudo pacman -U --noconfirm 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'
-    if echo -e "\n[chaotic-aur]\nInclude = /etc/pacman.d/chaotic-mirrorlist" | sudo tee -a /etc/pacman.conf > /dev/null && sudo pacman -Sy; then
+    chaotic_installed=false
+    for mirror in cdn-mirror.chaotic.cx geo-mirror.chaotic.cx; do
+        if sudo pacman -U --noconfirm "https://$mirror/chaotic-aur/chaotic-keyring.pkg.tar.zst" "https://$mirror/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst"; then
+            chaotic_installed=true
+            break
+        fi
+    done
+    if [[ "$chaotic_installed" == true && -f "$CHAOTIC_MIRRORLIST" ]] && echo -e "\n[chaotic-aur]\nInclude = $CHAOTIC_MIRRORLIST" | sudo tee -a /etc/pacman.conf > /dev/null && sudo pacman -Sy; then
         printfc "$GREEN" "Chaotic-AUR added."
     else
         printfc "$RED" "Failed to configure Chaotic-AUR."
     fi
-else
-    printfc "$GREEN" "Chaotic-AUR already configured."
 fi
 
 # ==============================================================================
