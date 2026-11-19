@@ -13,3 +13,11 @@ _wgm_set_paths() {
 _get_active_tunnel() {
     wg show interfaces 2>/dev/null | awk '{print $1; exit}'
 }
+
+_wgm_dns_to_resolved() {
+    local conf="$1" servers
+    servers=$(awk -F'=' '/^DNS[[:space:]]*=/ {print $2}' "$conf" | tr ',' ' ' | tr -s ' ' '\n' | grep -E '^[0-9a-fA-F.:]+$' | paste -sd' ' -)
+    [[ -n "$servers" ]] || return 0
+    sed -i -e '/^DNS[[:space:]]*=/d' -e '/^PostUp = resolvectl/d' -e '/^PostDown = resolvectl/d' "$conf"
+    sed -i "/^\[Interface\]/a PostUp = resolvectl dns %i $servers; resolvectl domain %i ~.\nPostDown = resolvectl revert %i" "$conf"
+}

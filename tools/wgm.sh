@@ -87,8 +87,8 @@ _warp_generate() {
     mv "$WARP_DIR/wgcf-profile.conf" "$WARP_CONF"
     chmod 600 "$WARP_CONF"
 
-    sed -i '/^DNS/d' "$WARP_CONF"
-    printfc "$NORD_GREEN" "DNS removed"
+    _wgm_dns_to_resolved "$WARP_CONF"
+    printfc "$NORD_GREEN" "DNS routed through systemd-resolved"
 
     local endpoint_ip
     endpoint_ip=$(getent ahostsv4 engage.cloudflareclient.com | awk '{print $1}' | head -n1)
@@ -199,7 +199,7 @@ wgm_add() {
         return 1
     fi
     chmod 600 "$dest"
-    sed -i '/^DNS/d' "$dest"
+    _wgm_dns_to_resolved "$dest"
     printfc "$NORD_GREEN" "Profile added"
     printfc "$NORD_SNOW_1" "Path: %s" "$dest"
 }
