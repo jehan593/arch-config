@@ -249,12 +249,6 @@ syscheck() {
         _syscheck_row ok "Pacnew" "none in /etc"
     fi
 
-    if grep -q '\[chaotic-aur\]' /etc/pacman.conf && [[ ! -f /etc/pacman.d/chaotic-mirrorlist ]]; then
-        _syscheck_row warn "Chaotic-AUR" "mirrorlist missing, run setup.sh"
-    elif grep -q '\[chaotic-aur\]' /etc/pacman.conf; then
-        _syscheck_row ok "Chaotic-AUR" "configured"
-    fi
-
     if ! errs=$(journalctl -b -p err -q --no-pager 2>/dev/null); then
         _syscheck_row warn "Journal" "could not be read"
     elif [[ -n "$errs" ]]; then
