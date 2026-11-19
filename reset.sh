@@ -256,10 +256,13 @@ fi
 printfc "$BLUE" "\n>Chaotic-AUR\n"
 
 if grep -q "\[chaotic-aur\]" /etc/pacman.conf; then
-    sudo sed -i '/\[chaotic-aur\]/,/Include.*chaotic-mirrorlist/d' /etc/pacman.conf
-    sudo pacman -Rns --noconfirm chaotic-keyring chaotic-mirrorlist
-    sudo pacman -Syy
-    printfc "$GREEN" "Chaotic-AUR removed."
+    if sudo sed -i '/\[chaotic-aur\]/,/Include.*chaotic-mirrorlist/d' /etc/pacman.conf && ! grep -q "\[chaotic-aur\]" /etc/pacman.conf; then
+        sudo pacman -Rns --noconfirm chaotic-keyring chaotic-mirrorlist
+        sudo pacman -Syy
+        printfc "$GREEN" "Chaotic-AUR removed."
+    else
+        printfc "$RED" "Failed to remove [chaotic-aur] from pacman.conf, package removal skipped."
+    fi
 else
     printfc "$YELLOW" "Chaotic-AUR not configured, skipping."
 fi
