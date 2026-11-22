@@ -6,7 +6,7 @@ browser/editor policies) and a matching `reset.sh` that undoes it.
 
 Built for Cinnamon on Arch (or an Arch-based distro with a compatible
 package manager and AUR access). Some steps (`gsettings` schemas, the theme
-package list) are Cinnamon-specific ΓÇö skip or adapt those sections if you're
+package list) are Cinnamon-specific — skip or adapt those sections if you're
 on a different desktop.
 
 > **FYI:** This project is fully vibe coded for my personal use and taste. It's shared publicly in case it's useful to you. Feel free to fork it and adapt it to your needs.
@@ -32,15 +32,15 @@ bash ~/arch-config/reset.sh
    file it would overwrite (`<file>.bak.<timestamp>`).
 3. Symlinks everything under `tools/` into `/usr/local/bin`.
 4. Copies everything under `etc/` into `/etc`, mirroring the same path
-   (e.g. `etc/brave/policies/managed/arch-config.json` ΓåÆ
+   (e.g. `etc/brave/policies/managed/arch-config.json` →
    `/etc/brave/policies/managed/arch-config.json`).
 5. Installs `yay` and enables the Chaotic-AUR repo if not already present.
 6. Installs the package list in `helpers/pkg-list.sh` plus theme packages.
 7. Adds a passwordless-sudo rule scoped to `updatedb` only.
 8. Enables `Color`/`ILoveCandy` in `pacman.conf`.
 9. Clones every repo in `helpers/repo-list.sh` into `$HOME` (currently the
-   [wallpapers repo](https://github.com/jehan593/my-wallpapers) ΓåÆ
-   `~/Pictures/my-wallpapers`, plus several browser-extension repos ΓåÆ
+   [wallpapers repo](https://github.com/jehan593/my-wallpapers) →
+   `~/Pictures/my-wallpapers`, plus several browser-extension repos →
    `~/browser-extensions`).
 10. Installs the Nord GTK/icon/cursor theme and applies it via `gsettings`.
 
@@ -70,7 +70,7 @@ reset.sh      Uninstaller
 ## Shell environment (`home/.bashrc`)
 
 Requires `fzf`, `yay`, `git`, `curl`, `xclip`, `checkupdates`, `paccache`,
-`reflector`, and `xdg-open` ΓÇö falls back to a minimal prompt if any are
+`reflector`, and `xdg-open` — falls back to a minimal prompt if any are
 missing.
 
 | Command | Purpose |
@@ -104,6 +104,6 @@ missing.
 - **Media**: mpv (`mpv.conf`, `input.conf`, `scripts/hold-space-2x.lua`)
 - **Maintenance**: Topgrade (`topgrade.toml`)
 - **Browser policy**: Brave, Chrome, Firefox (telemetry/tracking disabled,
-  uBlock Origin pinned), VS Code ΓÇö installed system-wide via `etc/`
+  uBlock Origin pinned), VS Code — installed system-wide via `etc/`
 - **Firefox prefs**: [Betterfox](https://github.com/yokoffing/Betterfox)
   baseline, pruned/extended by `data/firefox/` and applied by `upf`
