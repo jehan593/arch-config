@@ -143,7 +143,7 @@ _syscheck_row() {
 
 syscheck() {
     local bad=0 warn=0 line pct mnt avail used d out errs count
-    local bat cap status full design health mt mu ma st su mpct t failed sudo_ok=true
+    local bat cap status full design health mt mu ma st su mpct t failed sudo_ok=true power
 
     sudo -v || sudo_ok=false
 
@@ -221,6 +221,14 @@ syscheck() {
             full=$(< "$bat/charge_full"); design=$(< "$bat/charge_full_design")
         fi
         health=$(( design > 0 ? full * 100 / design : 0 ))
+        if [[ "$(grep -lx 1 /sys/class/power_supply/*/online 2>/dev/null | while read -r f; do [[ "$(< "${f%/online}/type")" == Mains ]] && echo y; done)" == y ]]; then
+            power="AC"
+        elif [[ "$status" == Discharging ]]; then
+            power="battery"
+        else
+            power="AC"
+        fi
+        _syscheck_row ok "Power" "on $power"
         _syscheck_row ok "Charge" "$cap% · $status"
         if (( health < 80 )); then
             _syscheck_row warn "Health" "$health% of design capacity"
